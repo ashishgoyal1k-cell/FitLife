@@ -1,0 +1,102 @@
+/* =========================================
+   PhotoCapture Component Styles
+   ========================================= */
+
+.photo-capture-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.photo-preview-box {
+  position: relative;
+  width: 100%;
+  max-width: 200px;
+}
+
+.photo-preview-img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border);
+}
+
+.photo-remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  padding: 6px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform var(--transition-fast);
+}
+
+.photo-remove-btn:hover {
+  transform: scale(1.08);
+}
+
+.photo-camera-card {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 300px;
+}
+
+.photo-video-feed {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  background-color: #000000;
+  transform: scaleX(-1);
+}
+
+.photo-camera-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.photo-btn-cancel {
+  flex: 1;
+  padding: 8px;
+}
+
+.photo-btn-capture {
+  flex: 2;
+  padding: 8px;
+}
+
+.photo-trigger-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.photo-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+}
+
+.photo-error-box {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}

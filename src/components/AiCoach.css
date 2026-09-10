@@ -1,0 +1,97 @@
+/* =========================================
+   AiCoach Component Styles
+   ========================================= */
+
+.ai-coach-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  transition: border-color var(--transition-normal);
+}
+
+.ai-coach-card:hover {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.ai-coach-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ai-coach-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px 0;
+}
+
+.ai-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background-color: var(--primary-glow);
+  color: var(--primary);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.ai-coach-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ai-coach-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.ai-coach-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--danger);
+  margin-top: 14px;
+  font-size: 0.85rem;
+  background-color: rgba(239, 68, 68, 0.08);
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.ai-coach-advice-card {
+  margin-top: 16px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.05);
+}
+
+.ai-coach-advice-text {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.ai-coach-disclaimer {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 14px 0 0 0;
+  line-height: 1.4;
+}

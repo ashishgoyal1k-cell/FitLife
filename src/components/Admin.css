@@ -1,0 +1,14 @@
+/* =========================================
+   Admin Component Styles
+   ========================================= */
+
+.admin-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeIn var(--transition-normal);
+}
+
+.table-row-hover:hover {
+  background-color: var(--primary-glow) !important;
+}

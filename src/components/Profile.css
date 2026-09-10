@@ -1,0 +1,170 @@
+/* =========================================
+   Profile Component Styles
+   ========================================= */
+
+.profile-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.profile-header {
+  margin-bottom: 24px;
+}
+
+.profile-header-title {
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+}
+
+.profile-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .profile-layout-grid {
+    grid-template-columns: 3fr 2fr !important;
+  }
+}
+
+.profile-photo-wrapper {
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 20px;
+}
+
+.profile-gender-group {
+  display: flex;
+  gap: 8px;
+}
+
+.profile-input-icon-wrapper {
+  position: relative;
+}
+
+.profile-input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+}
+
+.profile-input-with-icon {
+  padding-left: 40px !important;
+}
+
+.profile-submit-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.profile-submit-btn {
+  flex: 1;
+  padding: 12px;
+}
+
+.profile-success-alert {
+  margin-top: 16px;
+  padding: 12px;
+  font-size: 0.9rem;
+}
+
+/* Sidebar / Summary Box */
+.profile-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-targets-card {
+  border-color: var(--primary) !important;
+  border-width: 2px !important;
+}
+
+.profile-targets-header {
+  font-size: 1.2rem;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-calorie-box {
+  text-align: center;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-calorie-label {
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+}
+
+.profile-calorie-number {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.profile-calorie-unit {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.profile-macros-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+  text-align: center;
+}
+
+.profile-macro-divider {
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.profile-macro-val-carbs {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--secondary);
+  margin-top: 4px;
+}
+
+.profile-macro-val-protein {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 4px;
+}
+
+.profile-macro-val-fat {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--tertiary);
+  margin-top: 4px;
+}
+
+.profile-metrics-card {
+  font-size: 0.9rem;
+}
+
+.profile-metric-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.profile-metric-border {
+  border-bottom: 1px solid var(--border);
+}
