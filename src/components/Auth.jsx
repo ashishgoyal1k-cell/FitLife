@@ -34,10 +34,16 @@ export const Auth = ({ onAuthSuccess }) => {
   const [loading, setLoading] = useState(false);
 
   // Modals & Google OAuth Setup
+  const DEFAULT_GOOGLE_CLIENT_ID = '677917742316-gqi5ai82alpmdk5scikg9t3gg9jeeb0p.apps.googleusercontent.com';
   const [googleClientId, setGoogleClientId] = useState(() => {
-    return import.meta.env.VITE_GOOGLE_CLIENT_ID || localStorage.getItem('fitlife_google_client_id') || '';
+    const saved = localStorage.getItem('fitlife_google_client_id');
+    if (saved && saved.includes('566386177665')) {
+      localStorage.setItem('fitlife_google_client_id', DEFAULT_GOOGLE_CLIENT_ID);
+      return DEFAULT_GOOGLE_CLIENT_ID;
+    }
+    return import.meta.env.VITE_GOOGLE_CLIENT_ID || saved || DEFAULT_GOOGLE_CLIENT_ID;
   });
-  const activeClientId = (googleClientId || import.meta.env.VITE_GOOGLE_CLIENT_ID || localStorage.getItem('fitlife_google_client_id') || '').trim();
+  const activeClientId = (googleClientId || import.meta.env.VITE_GOOGLE_CLIENT_ID || localStorage.getItem('fitlife_google_client_id') || DEFAULT_GOOGLE_CLIENT_ID).trim();
   const [showGoogleSetupModal, setShowGoogleSetupModal] = useState(false);
   const [googleClientIdInput, setGoogleClientIdInput] = useState('');
   const [copiedOrigin, setCopiedOrigin] = useState(false);
@@ -48,6 +54,11 @@ export const Auth = ({ onAuthSuccess }) => {
   // One-time client purge of any residual personal/test credentials in localStorage
   useEffect(() => {
     try {
+      const savedId = localStorage.getItem('fitlife_google_client_id');
+      if (savedId && savedId.includes('566386177665')) {
+        localStorage.setItem('fitlife_google_client_id', DEFAULT_GOOGLE_CLIENT_ID);
+        setGoogleClientId(DEFAULT_GOOGLE_CLIENT_ID);
+      }
       const toRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
