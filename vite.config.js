@@ -1,12 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
-
 import fs from 'fs'
 import path from 'path'
 
-function getEnvValue(keyName: string): string {
-  if (process.env[keyName]) return process.env[keyName]!.trim()
+function getEnvValue(keyName) {
+  if (process.env[keyName]) return process.env[keyName].trim()
   try {
     const envFile = path.resolve(process.cwd(), '.env')
     if (fs.existsSync(envFile)) {
@@ -20,22 +19,22 @@ function getEnvValue(keyName: string): string {
   return ''
 }
 
-function generateBuiltinHealthAdvice(healthData: any): string {
-  const { profile = {}, meals = [], exercises = [], waterMl = 0, sleepHours = 0 } = healthData;
-  const username = profile.username || 'Friend';
-  const goal = profile.goal || 'maintain';
-  const targetCalories = Number(profile.targetCalories) || 2000;
-  const targetProtein = Number(profile.targetProtein) || 125;
-  const targetWater = Number(profile.waterTarget) || 2000;
-  const targetSleep = Number(profile.sleepTarget) || 8;
+function generateBuiltinHealthAdvice(healthData) {
+  const { profile = {}, meals = [], exercises = [], waterMl = 0, sleepHours = 0 } = healthData || {}
+  const username = profile.username || 'Friend'
+  const goal = profile.goal || 'maintain'
+  const targetCalories = Number(profile.targetCalories) || 2000
+  const targetProtein = Number(profile.targetProtein) || 125
+  const targetWater = Number(profile.waterTarget) || 2000
+  const targetSleep = Number(profile.sleepTarget) || 8
 
-  const totalCalories = meals.reduce((sum: number, m: any) => sum + (Number(m.calories) || 0), 0);
-  const totalProtein = meals.reduce((sum: number, m: any) => sum + (Number(m.protein) || 0), 0);
-  const totalExerciseMins = exercises.reduce((sum: number, e: any) => sum + (Number(e.durationMins) || (e.sets ? e.sets * 1.5 : 0)), 0);
+  const totalCalories = meals.reduce((sum, m) => sum + (Number(m.calories) || 0), 0)
+  const totalProtein = meals.reduce((sum, m) => sum + (Number(m.protein) || 0), 0)
+  const totalExerciseMins = exercises.reduce((sum, e) => sum + (Number(e.durationMins) || (e.sets ? e.sets * 1.5 : 0)), 0)
 
-  const calDiff = targetCalories - totalCalories;
-  const waterDiff = targetWater - waterMl;
-  const sleepDiff = targetSleep - sleepHours;
+  const calDiff = targetCalories - totalCalories
+  const waterDiff = targetWater - waterMl
+  const sleepDiff = targetSleep - sleepHours
 
   if (meals.length === 0 && totalExerciseMins === 0 && waterMl === 0) {
     return `👋 **Hey ${username}! Let's kickstart your healthy day!**\n\n` +
@@ -43,48 +42,48 @@ function generateBuiltinHealthAdvice(healthData: any): string {
       `• 💧 **Hydration Goal:** Start with a warm glass of water (250–500ml) to awaken digestion.\n` +
       `• 🎯 **Today's Budget:** You have **${targetCalories} kcal** and **${targetProtein}g of protein** ready in your daily targets.\n` +
       `• 👟 **Move a little:** Even a brisk 15-minute walk today will boost circulation and mental focus!\n\n` +
-      `*Log your meals and habits above, then click here again for updated, personalized coaching analysis!*`;
+      `*Log your meals and habits above, then click here again for updated, personalized coaching analysis!*`
   }
 
-  let calStatus = '';
+  let calStatus = ''
   if (calDiff > 300) {
-    calStatus = `You have **${calDiff} kcal remaining** today. ${goal === 'lose' ? 'Great calorie deficit pacing for fat loss!' : 'Consider a wholesome snack like nuts, fruit, or boiled eggs to hit your target.'}`;
+    calStatus = `You have **${calDiff} kcal remaining** today. ${goal === 'lose' ? 'Great calorie deficit pacing for fat loss!' : 'Consider a wholesome snack like nuts, fruit, or boiled eggs to hit your target.'}`
   } else if (calDiff >= -100 && calDiff <= 300) {
-    calStatus = `**Spot on!** You are right on track with **${totalCalories} / ${targetCalories} kcal** consumed (${Math.abs(calDiff)} kcal difference). Outstanding portion control!`;
+    calStatus = `**Spot on!** You are right on track with **${totalCalories} / ${targetCalories} kcal** consumed (${Math.abs(calDiff)} kcal difference). Outstanding portion control!`
   } else {
-    calStatus = `You are **${Math.abs(calDiff)} kcal over** your daily target (${totalCalories} / ${targetCalories} kcal). ${goal === 'lose' ? 'No worries! A light evening walk or having high-fiber greens with your next meal will balance it out nicely.' : 'Good caloric surplus for muscle recovery!'}`;
+    calStatus = `You are **${Math.abs(calDiff)} kcal over** your daily target (${totalCalories} / ${targetCalories} kcal). ${goal === 'lose' ? 'No worries! A light evening walk or having high-fiber greens with your next meal will balance it out nicely.' : 'Good caloric surplus for muscle recovery!'}`
   }
 
-  let proteinStatus = '';
-  const proteinPercent = Math.round((totalProtein / targetProtein) * 100);
+  let proteinStatus = ''
+  const proteinPercent = Math.round((totalProtein / targetProtein) * 100)
   if (proteinPercent >= 90) {
-    proteinStatus = `**Excellent protein intake!** You logged **${totalProtein}g** (${proteinPercent}% of your ${targetProtein}g goal). Your muscles have plenty of amino acids for repair.`;
+    proteinStatus = `**Excellent protein intake!** You logged **${totalProtein}g** (${proteinPercent}% of your ${targetProtein}g goal). Your muscles have plenty of amino acids for repair.`
   } else {
-    const proteinLeft = targetProtein - totalProtein;
-    proteinStatus = `You've reached **${totalProtein}g / ${targetProtein}g protein** (${proteinLeft}g remaining). Try adding paneer, dal, Greek yogurt, tofu, or eggs to your next meal.`;
+    const proteinLeft = targetProtein - totalProtein
+    proteinStatus = `You've reached **${totalProtein}g / ${targetProtein}g protein** (${proteinLeft}g remaining). Try adding paneer, dal, Greek yogurt, tofu, or eggs to your next meal.`
   }
 
-  let hydrationStatus = '';
+  let hydrationStatus = ''
   if (waterMl >= targetWater) {
-    hydrationStatus = `**Hydration champion!** You've completed **${waterMl}ml** (Goal: ${targetWater}ml). Hydration promotes optimal digestion and nutrient absorption.`;
+    hydrationStatus = `**Hydration champion!** You've completed **${waterMl}ml** (Goal: ${targetWater}ml). Hydration promotes optimal digestion and nutrient absorption.`
   } else {
-    hydrationStatus = `Hydration is at **${waterMl}ml / ${targetWater}ml** (${waterDiff}ml left). Remember to sip 1–2 more cups of water before the day ends.`;
+    hydrationStatus = `Hydration is at **${waterMl}ml / ${targetWater}ml** (${waterDiff}ml left). Remember to sip 1–2 more cups of water before the day ends.`
   }
 
-  let exerciseStatus = '';
+  let exerciseStatus = ''
   if (totalExerciseMins > 0) {
-    exerciseStatus = `**Great workout effort!** You logged **${totalExerciseMins} mins** of physical activity across ${exercises.length} exercise(s). Regular physical activity accelerates cardiovascular health and metabolic rate.`;
+    exerciseStatus = `**Great workout effort!** You logged **${totalExerciseMins} mins** of physical activity across ${exercises.length} exercise(s). Regular physical activity accelerates cardiovascular health and metabolic rate.`
   } else {
-    exerciseStatus = `No workouts logged yet today. Aim for at least 20–30 minutes of walking, yoga poses (Surya Namaskar), or stretching to keep your joints agile.`;
+    exerciseStatus = `No workouts logged yet today. Aim for at least 20–30 minutes of walking, yoga poses (Surya Namaskar), or stretching to keep your joints agile.`
   }
 
-  let sleepStatus = '';
+  let sleepStatus = ''
   if (sleepHours >= 7) {
-    sleepStatus = `**Restorative sleep!** You logged **${sleepHours} hours** of rest (Target: ${targetSleep}h). Quality sleep optimizes cortisol and appetite regulation hormones.`;
+    sleepStatus = `**Restorative sleep!** You logged **${sleepHours} hours** of rest (Target: ${targetSleep}h). Quality sleep optimizes cortisol and appetite regulation hormones.`
   } else if (sleepHours > 0) {
-    sleepStatus = `You logged **${sleepHours} hours** of sleep (Target: ${targetSleep}h). You have a slight sleep deficit of ${sleepDiff > 0 ? sleepDiff : 1}h. Aim for an earlier bedtime tonight to let muscle tissue recharge.`;
+    sleepStatus = `You logged **${sleepHours} hours** of sleep (Target: ${targetSleep}h). You have a slight sleep deficit of ${sleepDiff > 0 ? sleepDiff : 1}h. Aim for an earlier bedtime tonight to let muscle tissue recharge.`
   } else {
-    sleepStatus = `Remember to log your bedtime & wake-up times in the Sleep Tracker to monitor your recovery cycle.`;
+    sleepStatus = `Remember to log your bedtime & wake-up times in the Sleep Tracker to monitor your recovery cycle.`
   }
 
   return `🌟 **Daily Health Coach Summary for ${username}**\n\n` +
@@ -93,12 +92,12 @@ function generateBuiltinHealthAdvice(healthData: any): string {
     `• 💧 **Hydration:** ${hydrationStatus}\n` +
     `• 🏋️ **Active Movement:** ${exerciseStatus}\n` +
     `• 🌙 **Sleep & Recovery:** ${sleepStatus}\n\n` +
-    `💡 **Coach's Top Tip for Today:** Prioritize mindful eating, chew slowly, and stay hydrated between meals. You're making consistent progress toward your **${goal === 'lose' ? 'Weight Loss' : goal === 'gain' ? 'Muscle Gain' : 'Healthy Maintenance'}** goal! 🚀`;
+    `💡 **Coach's Top Tip for Today:** Prioritize mindful eating, chew slowly, and stay hydrated between meals. You're making consistent progress toward your **${goal === 'lose' ? 'Weight Loss' : goal === 'gain' ? 'Muscle Gain' : 'Healthy Maintenance'}** goal! 🚀`
 }
 
 const aiCoachApi = {
   name: 'ai-coach-api',
-  configureServer(server: { middlewares: { use: (path: string, handler: (req: any, res: any) => Promise<void>) => void } }) {
+  configureServer(server) {
     server.middlewares.use('/api/ai-coach', async (req, res) => {
       if (req.method !== 'POST') {
         res.statusCode = 405
@@ -108,7 +107,7 @@ const aiCoachApi = {
 
       let body = ''
       for await (const chunk of req) body += chunk
-      let healthData: any = {}
+      let healthData = {}
       try {
         healthData = JSON.parse(body)
       } catch {}
@@ -149,8 +148,8 @@ const aiCoachApi = {
           }
 
           if (response.ok) {
-            const data: any = await response.json()
-            const adviceText = data.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('\n')
+            const data = await response.json()
+            const adviceText = data.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('\n')
             if (adviceText) {
               res.statusCode = 200
               res.setHeader('Content-Type', 'application/json')
@@ -174,7 +173,7 @@ const aiCoachApi = {
 
 const otpApi = {
   name: 'otp-api',
-  configureServer(server: { middlewares: { use: (path: string, handler: (req: any, res: any) => Promise<void>) => void } }) {
+  configureServer(server) {
     server.middlewares.use('/api/send-otp', async (req, res) => {
       if (req.method !== 'POST') {
         res.statusCode = 405
@@ -239,7 +238,7 @@ const otpApi = {
             body: params.toString(),
           })
 
-          const data = await r.json() as any
+          const data = await r.json()
           if (!r.ok) {
             throw new Error(data.message || 'Twilio delivery failed. Check credentials and recipient number.')
           }
@@ -261,7 +260,7 @@ const otpApi = {
           // Try route=otp
           const otpUrl = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(apiKey)}&route=otp&variables_values=${otp}&numbers=${cleanPhone}`
           const r = await fetch(otpUrl, { method: 'GET' })
-          const data = await r.json() as any
+          const data = await r.json()
 
           if (data.return) {
             res.statusCode = 200
@@ -273,7 +272,7 @@ const otpApi = {
           // If route=otp asks for website verification, attempt route=q (Quick SMS)
           const qUrl = `https://www.fast2sms.com/dev/bulkV2?authorization=${encodeURIComponent(apiKey)}&route=q&message=${encodeURIComponent(`Your FitLife Verification Code is: ${otp}. Valid for 5 minutes.`)}&language=english&flash=0&numbers=${cleanPhone}`
           const qResp = await fetch(qUrl, { method: 'GET' })
-          const qData = await qResp.json() as any
+          const qData = await qResp.json()
 
           if (qData.return) {
             res.statusCode = 200
@@ -319,7 +318,7 @@ const otpApi = {
             }),
           })
 
-          const rapidData = await rapidResp.json().catch(() => ({})) as any
+          const rapidData = await rapidResp.json().catch(() => ({}))
           if (!rapidResp.ok || (rapidData.error && rapidData.error !== 0)) {
             const errDetail = rapidData.message || rapidData.error_message || (rapidData.error ? `SMSAPI Error Code ${rapidData.error}` : null) || `RapidAPI error (HTTP ${rapidResp.status})`
             throw new Error(errDetail)
@@ -332,11 +331,54 @@ const otpApi = {
         }
 
         throw new Error(`Unsupported provider: ${provider}`)
-      } catch (err: any) {
+      } catch (err) {
         res.statusCode = 400
         res.setHeader('Content-Type', 'application/json')
         res.end(JSON.stringify({ success: false, error: err.message || 'Failed to dispatch OTP.' }))
       }
+    })
+  },
+}
+
+const googleAuthApi = {
+  name: 'google-auth-api',
+  configureServer(server) {
+    server.middlewares.use('/api/google-client-id', async (req, res) => {
+      res.setHeader('Content-Type', 'application/json')
+      if (req.method === 'GET') {
+        const clientId = getEnvValue('VITE_GOOGLE_CLIENT_ID') || getEnvValue('GOOGLE_CLIENT_ID')
+        res.statusCode = 200
+        res.end(JSON.stringify({ clientId }))
+        return
+      }
+      if (req.method === 'POST') {
+        let body = ''
+        for await (const chunk of req) body += chunk
+        try {
+          const { clientId } = JSON.parse(body)
+          const cleanId = String(clientId || '').trim()
+          const envFile = path.resolve(process.cwd(), '.env')
+          let envContent = ''
+          if (fs.existsSync(envFile)) {
+            envContent = fs.readFileSync(envFile, 'utf8')
+          }
+          if (/^VITE_GOOGLE_CLIENT_ID\s*=/m.test(envContent)) {
+            envContent = envContent.replace(/^VITE_GOOGLE_CLIENT_ID\s*=.*$/m, `VITE_GOOGLE_CLIENT_ID=${cleanId}`)
+          } else {
+            envContent += `\nVITE_GOOGLE_CLIENT_ID=${cleanId}\n`
+          }
+          fs.writeFileSync(envFile, envContent, 'utf8')
+          process.env.VITE_GOOGLE_CLIENT_ID = cleanId
+          res.statusCode = 200
+          res.end(JSON.stringify({ success: true, clientId: cleanId }))
+        } catch (err) {
+          res.statusCode = 400
+          res.end(JSON.stringify({ success: false, error: err.message }))
+        }
+        return
+      }
+      res.statusCode = 405
+      res.end(JSON.stringify({ error: 'Method not allowed' }))
     })
   },
 }
@@ -348,7 +390,7 @@ export default defineConfig({
     host: true,
     allowedHosts: true,
   },
-  plugins: [react(), aiCoachApi, otpApi],
+  plugins: [react(), aiCoachApi, otpApi, googleAuthApi],
   build: {
     rollupOptions: {
       input: {

@@ -33,11 +33,12 @@ export const Auth = ({ onAuthSuccess }) => {
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Modals
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const [showCustomGoogleInput, setShowCustomGoogleInput] = useState(false);
-  const [customGoogleName, setCustomGoogleName] = useState('');
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
+  // Modals & Google OAuth Setup
+  const [googleClientId, setGoogleClientId] = useState(() => {
+    return import.meta.env.VITE_GOOGLE_CLIENT_ID || localStorage.getItem('fitlife_google_client_id') || '';
+  });
+  const [showGoogleSetupModal, setShowGoogleSetupModal] = useState(false);
+  const [googleClientIdInput, setGoogleClientIdInput] = useState('');
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetDone, setResetDone] = useState(false);
@@ -56,6 +57,127 @@ export const Auth = ({ onAuthSuccess }) => {
     } catch {}
   }, []);
 
+  // Fetch Google Client ID from server .env if available
+  useEffect(() => {
+    fetch('/api/google-client-id')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.clientId) {
+          setGoogleClientId(data.clientId);
+          localStorage.setItem('fitlife_google_client_id', data.clientId);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Profile Factory (Pure JS)
+  const createProfile = (name, goal, contact = '') => {
+    const goalVal = goal || 'maintain';
+    return {
+      username: name || 'User',
+      contactNumber: contact || '',
+      age: 25,
+      weight: 70,
+      height: 170,
+      gender: 'male',
+      activityLevel: 'moderate',
+      goal: goalVal,
+      targetCalories: goalVal === 'lose' ? 1800 : (goalVal === 'gain' ? 2400 : 2000),
+      targetProtein: 130,
+      targetCarbs: 220,
+      targetFat: 65,
+      waterTarget: 2500,
+      sleepTarget: 8,
+    };
+  };
+
+  // Register & Sign-in with official Google profile
+  const registerGoogleUser = (gProfile) => {
+    const cleanEmail = (gProfile.email || '').toLowerCase().trim();
+    const cleanName = gProfile.name || cleanEmail.split('@')[0];
+    const users = getAllUsers();
+    let existing = users[cleanEmail] || users[cleanEmail.split('@')[0]];
+
+    if (!existing) {
+      existing = createProfile(cleanName, 'maintain');
+      if (gProfile.picture) {
+        existing.photo = gProfile.picture;
+      }
+      users[cleanEmail] = existing;
+      localStorage.setItem('fitlife_users', JSON.stringify(users));
+      setCurrentUser(existing);
+      onAuthSuccess(existing, true);
+    } else {
+      if (gProfile.picture && !existing.photo) {
+        existing.photo = gProfile.picture;
+      }
+      setCurrentUser(existing);
+      onAuthSuccess(existing, false);
+    }
+  };
+
+  // Handle Google OAuth 2.0 redirect callback (when Google redirects back with #id_token=... or #access_token=...)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const hash = window.location.hash.substring(1);
+      const params = new URLSearchParams(hash);
+      const idToken = params.get('id_token');
+      const accessToken = params.get('access_token');
+      const errorParam = params.get('error');
+
+      if (errorParam) {
+        setError(`Google sign-in was cancelled or returned an error: ${errorParam}`);
+        window.history.replaceState(null, '', window.location.pathname);
+        return;
+      }
+
+      if (idToken || accessToken) {
+        setLoading(true);
+        window.history.replaceState(null, '', window.location.pathname);
+
+        // 1. Decode JWT ID Token
+        if (idToken) {
+          try {
+            const base64Url = idToken.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(
+              atob(base64)
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+            );
+            const payload = JSON.parse(jsonPayload);
+            if (payload && payload.email) {
+              registerGoogleUser(payload);
+              return;
+            }
+          } catch (e) {
+            console.warn('Could not parse id_token directly, falling back to userinfo', e);
+          }
+        }
+
+        // 2. Fetch Userinfo with Access Token
+        if (accessToken) {
+          fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data && data.email) {
+                registerGoogleUser(data);
+              } else {
+                setError('Failed to retrieve user profile from Google.');
+              }
+            })
+            .catch(() => {
+              setError('Could not connect to Google profile service.');
+            })
+            .finally(() => setLoading(false));
+        }
+      }
+    }
+  }, []);
+
   useEffect(() => {
     setError('');
     setSuccessMessage('');
@@ -64,14 +186,6 @@ export const Auth = ({ onAuthSuccess }) => {
       setContactNumber('');
     }
   }, [isLogin]);
-
-  useEffect(() => {
-    if (!showGoogleModal) {
-      setShowCustomGoogleInput(false);
-      setCustomGoogleName('');
-      setCustomGoogleEmail('');
-    }
-  }, [showGoogleModal]);
 
   // Handle Log In Submit
   const handleLoginSubmit = (e) => {
@@ -183,47 +297,90 @@ export const Auth = ({ onAuthSuccess }) => {
     }
   };
 
-  // Google Account Chooser
-  const handleGoogleSelect = (gUser) => {
-    setShowGoogleModal(false);
+  // Official Google OAuth 2.0 Dispatcher (Popup & Redirect)
+  const handleGoogleAuth = () => {
     setError('');
+    const activeClientId = (
+      googleClientId ||
+      import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+      localStorage.getItem('fitlife_google_client_id') ||
+      ''
+    ).trim();
 
-    const cleanEmail = gUser.email.toLowerCase();
-    const cleanName = gUser.name;
-    const users = getAllUsers();
-    const existing = users[cleanEmail] || users[cleanEmail.split('@')[0]];
-
-    if (existing) {
-      setCurrentUser(existing);
-      onAuthSuccess(existing, false);
-    } else {
-      const newProfile = createProfile(cleanName, 'maintain');
-      users[cleanEmail] = newProfile;
-      localStorage.setItem('fitlife_users', JSON.stringify(users));
-      setCurrentUser(newProfile);
-      onAuthSuccess(newProfile, true);
+    if (!activeClientId) {
+      setShowGoogleSetupModal(true);
+      return;
     }
+
+    // 1. Google Identity Services Popup (shows official Google Account Chooser popup exactly like screenshot)
+    if (window.google?.accounts?.oauth2) {
+      try {
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: activeClientId,
+          scope: 'openid email profile',
+          callback: async (resp) => {
+            if (resp.error) {
+              if (resp.error !== 'popup_closed_by_user') {
+                setError(`Google Sign-In: ${resp.error_description || resp.error}`);
+              }
+              return;
+            }
+            if (resp && resp.access_token) {
+              setLoading(true);
+              try {
+                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${resp.access_token}` },
+                });
+                const info = await res.json();
+                if (info && info.email) {
+                  registerGoogleUser(info);
+                } else {
+                  setError('Failed to retrieve user profile from Google.');
+                }
+              } catch (err) {
+                setError(`Google profile error: ${err.message}`);
+              } finally {
+                setLoading(false);
+              }
+            }
+          },
+        });
+        tokenClient.requestAccessToken({ prompt: 'select_account' });
+        return;
+      } catch (err) {
+        console.warn('GSI popup initialization failed, falling back to full redirect:', err);
+      }
+    }
+
+    // 2. Direct Redirect to official Google Accounts Login Page
+    const redirectUri = window.location.origin + window.location.pathname;
+    const scope = encodeURIComponent('openid email profile');
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(activeClientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token%20id_token&scope=${scope}&nonce=${Date.now()}&prompt=select_account`;
+    window.location.href = authUrl;
   };
 
-  // Profile Factory (Pure JS)
-  const createProfile = (name, goal, contact = '') => {
-    const goalVal = goal || 'maintain';
-    return {
-      username: name || 'User',
-      contactNumber: contact || '',
-      age: 25,
-      weight: 70,
-      height: 170,
-      gender: 'male',
-      activityLevel: 'moderate',
-      goal: goalVal,
-      targetCalories: goalVal === 'lose' ? 1800 : (goalVal === 'gain' ? 2400 : 2000),
-      targetProtein: 130,
-      targetCarbs: 220,
-      targetFat: 65,
-      waterTarget: 2500,
-      sleepTarget: 8,
-    };
+  // Save Google Client ID & immediately open Google Login
+  const handleSaveGoogleClientId = async (e) => {
+    e.preventDefault();
+    const cleanId = googleClientIdInput.trim();
+    if (!cleanId) return;
+
+    setGoogleClientId(cleanId);
+    localStorage.setItem('fitlife_google_client_id', cleanId);
+    setShowGoogleSetupModal(false);
+
+    try {
+      await fetch('/api/google-client-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: cleanId }),
+      });
+    } catch {}
+
+    const redirectUri = window.location.origin + window.location.pathname;
+    const scope = encodeURIComponent('openid email profile');
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(cleanId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=token%20id_token&scope=${scope}&nonce=${Date.now()}&prompt=select_account`;
+    window.location.href = authUrl;
   };
 
   const handleForgotPassword = (e) => {
@@ -381,7 +538,7 @@ export const Auth = ({ onAuthSuccess }) => {
             <button
               type="button"
               className="btn btn-secondary auth-google-btn"
-              onClick={() => setShowGoogleModal(true)}
+              onClick={handleGoogleAuth}
             >
               <svg viewBox="0 0 24 24" width="18" height="18" style={{ display: 'block' }}>
                 <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.65l3.15-3.15C17.45 1.77 14.93 1 12 1 7.37 1 3.4 3.66 1.48 7.55l3.77 2.92C6.15 7.57 8.85 5.04 12 5.04z" />
@@ -428,6 +585,7 @@ export const Auth = ({ onAuthSuccess }) => {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
                 required
               />
             </div>
@@ -457,7 +615,7 @@ export const Auth = ({ onAuthSuccess }) => {
               </select>
             </div>
 
-            <div className="form-group" style={{ marginBottom: '22px' }}>
+            <div className="form-group" style={{ marginBottom: '20px' }}>
               <label className="form-label">Password</label>
               <div className="auth-password-wrapper">
                 <input
@@ -468,6 +626,7 @@ export const Auth = ({ onAuthSuccess }) => {
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="new-password"
                   required
+                  minLength={6}
                 />
                 <button
                   type="button"
@@ -500,7 +659,7 @@ export const Auth = ({ onAuthSuccess }) => {
             <button
               type="button"
               className="btn btn-secondary auth-google-btn"
-              onClick={() => setShowGoogleModal(true)}
+              onClick={handleGoogleAuth}
             >
               <svg viewBox="0 0 24 24" width="18" height="18" style={{ display: 'block' }}>
                 <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.65l3.15-3.15C17.45 1.77 14.93 1 12 1 7.37 1 3.4 3.66 1.48 7.55l3.77 2.92C6.15 7.57 8.85 5.04 12 5.04z" />
@@ -526,10 +685,10 @@ export const Auth = ({ onAuthSuccess }) => {
         )}
       </div>
 
-      {/* Google Account Picker Modal */}
-      {showGoogleModal && (
+      {/* Google OAuth Setup Modal (Shown only if Client ID is missing on localhost) */}
+      {showGoogleSetupModal && (
         <div className="auth-modal-overlay">
-          <div className="glass-card animate-fade auth-modal-card">
+          <div className="glass-card animate-fade auth-modal-card" style={{ maxWidth: '480px' }}>
             <div className="auth-modal-header">
               <svg viewBox="0 0 24 24" width="32" height="32" style={{ display: 'block', margin: '0 auto 12px auto' }}>
                 <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.65l3.15-3.15C17.45 1.77 14.93 1 12 1 7.37 1 3.4 3.66 1.48 7.55l3.77 2.92C6.15 7.57 8.85 5.04 12 5.04z" />
@@ -537,109 +696,53 @@ export const Auth = ({ onAuthSuccess }) => {
                 <path fill="#FBBC05" d="M5.25 14.77c-.25-.75-.39-1.55-.39-2.37s.14-1.62.39-2.37L1.48 7.11C.53 9.02 0 11.16 0 13.4s.53 4.38 1.48 6.29l3.77-2.92z" />
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.7-2.87c-1.02.68-2.33 1.09-3.58 1.09-3.15 0-5.85-2.53-6.75-5.43L1.48 16.03C3.4 19.92 7.37 23 12 23z" />
               </svg>
-              <h3 className="auth-modal-title">Choose an account</h3>
-              <p className="auth-modal-subtitle">to continue to FitLife</p>
+              <h3 className="auth-modal-title">Official Google Sign-In</h3>
+              <p className="auth-modal-subtitle">
+                To redirect directly to Google's official sign-in page, provide your Google OAuth Client ID:
+              </p>
             </div>
 
-            <div style={{ padding: '8px 0' }}>
-              {[
-                { name: 'User Account', email: 'user@fitlife.app', avatar: 'U' },
-                { name: 'Fit Explorer', email: 'explorer@fitlife.app', avatar: 'FE' },
-              ].map((acc) => (
-                <div
-                  key={acc.email}
-                  onClick={() => handleGoogleSelect(acc)}
-                  className="auth-google-item"
-                >
-                  <div className="auth-google-avatar">
-                    {acc.avatar}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                    <span style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-primary)' }}>{acc.name}</span>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{acc.email}</span>
-                  </div>
-                  <ChevronRight size={16} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
-                </div>
-              ))}
+            <form onSubmit={handleSaveGoogleClientId} style={{ padding: '16px 24px' }}>
+              <div className="form-group" style={{ marginBottom: '14px' }}>
+                <label className="form-label">Google OAuth Client ID</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="e.g. 123456789-xxxx.apps.googleusercontent.com"
+                  value={googleClientIdInput}
+                  onChange={(e) => setGoogleClientIdInput(e.target.value)}
+                  required
+                  autoFocus
+                />
+              </div>
 
-              {/* Use another / personal Google account */}
-              {!showCustomGoogleInput ? (
-                <div
-                  onClick={() => setShowCustomGoogleInput(true)}
-                  className="auth-google-item"
-                  style={{ borderTop: '1px solid var(--border)', marginTop: '4px' }}
-                >
-                  <div className="auth-google-avatar" style={{ background: 'var(--surface-light)', color: 'var(--text-secondary)' }}>
-                    +
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                    <span style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-primary)' }}>Use another account</span>
-                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Enter your own Google email</span>
-                  </div>
-                  <ChevronRight size={16} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
-                </div>
-              ) : (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!customGoogleEmail.trim()) return;
-                    const cEmail = customGoogleEmail.trim().toLowerCase();
-                    const cName = customGoogleName.trim() || cEmail.split('@')[0];
-                    handleGoogleSelect({
-                      name: cName,
-                      email: cEmail,
-                      avatar: cName.charAt(0).toUpperCase()
-                    });
-                  }}
-                  style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '8px' }}
-                >
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Enter your name"
-                    value={customGoogleName}
-                    onChange={(e) => setCustomGoogleName(e.target.value)}
-                    style={{ fontSize: '0.85rem', padding: '8px 12px' }}
-                  />
-                  <input
-                    type="email"
-                    className="form-input"
-                    placeholder="you@gmail.com"
-                    value={customGoogleEmail}
-                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                    required
-                    style={{ fontSize: '0.85rem', padding: '8px 12px' }}
-                  />
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setShowCustomGoogleInput(false)}
-                      className="btn btn-secondary"
-                      style={{ padding: '4px 12px', fontSize: '0.8rem' }}
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      style={{ padding: '4px 14px', fontSize: '0.8rem' }}
-                    >
-                      Continue
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-light)', padding: '12px 14px', borderRadius: 'var(--radius-sm)', marginBottom: '16px', lineHeight: '1.45' }}>
+                <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>3-Step Setup for Localhost:</div>
+                <ol style={{ margin: 0, paddingLeft: '18px' }}>
+                  <li>Open <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>Google Cloud Console &rarr; Credentials</a></li>
+                  <li>Click <strong>Create Credentials &rarr; OAuth client ID</strong> (Web application)</li>
+                  <li>Add Authorized JavaScript origin: <code>http://localhost:5174</code></li>
+                </ol>
+              </div>
 
-            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setShowGoogleModal(false)}
-                className="btn btn-secondary"
-                style={{ padding: '6px 14px', fontSize: '0.82rem', borderRadius: 'var(--radius-sm)' }}
-              >
-                Cancel
-              </button>
-            </div>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleSetupModal(false)}
+                  className="btn btn-secondary"
+                  style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+                >
+                  Save & Open Google Sign-In
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
