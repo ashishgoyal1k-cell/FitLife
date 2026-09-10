@@ -9,7 +9,19 @@ export const Auth = ({ onAuthSuccess }) => {
 
   // Form Fields
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState(() => localStorage.getItem('fitlife_remember_email') || localStorage.getItem('healthify_remember_email') || '');
+  const [email, setEmail] = useState(() => {
+    try {
+      const saved = localStorage.getItem('fitlife_remember_email') || localStorage.getItem('healthify_remember_email') || '';
+      if (saved.toLowerCase().includes('ashish')) {
+        localStorage.removeItem('fitlife_remember_email');
+        localStorage.removeItem('healthify_remember_email');
+        return '';
+      }
+      return saved;
+    } catch {
+      return '';
+    }
+  });
   const [contactNumber, setContactNumber] = useState('');
   const [fitnessGoal, setFitnessGoal] = useState('maintain');
   const [password, setPassword] = useState('');
@@ -23,14 +35,43 @@ export const Auth = ({ onAuthSuccess }) => {
 
   // Modals
   const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [showCustomGoogleInput, setShowCustomGoogleInput] = useState(false);
+  const [customGoogleName, setCustomGoogleName] = useState('');
+  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetDone, setResetDone] = useState(false);
 
+  // One-time client purge of any residual personal/test credentials in localStorage
+  useEffect(() => {
+    try {
+      const toRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.toLowerCase().includes('ashish') || k.toLowerCase().includes('8529874646'))) {
+          toRemove.push(k);
+        }
+      }
+      toRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {}
+  }, []);
+
   useEffect(() => {
     setError('');
     setSuccessMessage('');
+    setPassword('');
+    if (!isLogin) {
+      setContactNumber('');
+    }
   }, [isLogin]);
+
+  useEffect(() => {
+    if (!showGoogleModal) {
+      setShowCustomGoogleInput(false);
+      setCustomGoogleName('');
+      setCustomGoogleEmail('');
+    }
+  }, [showGoogleModal]);
 
   // Handle Log In Submit
   const handleLoginSubmit = (e) => {
@@ -282,6 +323,7 @@ export const Auth = ({ onAuthSuccess }) => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                   required
                 />
                 <button
@@ -424,6 +466,7 @@ export const Auth = ({ onAuthSuccess }) => {
                   placeholder="At least 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
                   required
                 />
                 <button
@@ -500,8 +543,8 @@ export const Auth = ({ onAuthSuccess }) => {
 
             <div style={{ padding: '8px 0' }}>
               {[
-                { name: 'Ashish Goyal', email: 'ashishgoyal@gmail.com', avatar: 'AG' },
-                { name: 'Fit Explorer', email: 'fit.explorer@gmail.com', avatar: 'FE' },
+                { name: 'User Account', email: 'user@fitlife.app', avatar: 'U' },
+                { name: 'Fit Explorer', email: 'explorer@fitlife.app', avatar: 'FE' },
               ].map((acc) => (
                 <div
                   key={acc.email}
@@ -518,6 +561,74 @@ export const Auth = ({ onAuthSuccess }) => {
                   <ChevronRight size={16} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
                 </div>
               ))}
+
+              {/* Use another / personal Google account */}
+              {!showCustomGoogleInput ? (
+                <div
+                  onClick={() => setShowCustomGoogleInput(true)}
+                  className="auth-google-item"
+                  style={{ borderTop: '1px solid var(--border)', marginTop: '4px' }}
+                >
+                  <div className="auth-google-avatar" style={{ background: 'var(--surface-light)', color: 'var(--text-secondary)' }}>
+                    +
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                    <span style={{ fontSize: '0.92rem', fontWeight: 600, color: 'var(--text-primary)' }}>Use another account</span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Enter your own Google email</span>
+                  </div>
+                  <ChevronRight size={16} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
+                </div>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!customGoogleEmail.trim()) return;
+                    const cEmail = customGoogleEmail.trim().toLowerCase();
+                    const cName = customGoogleName.trim() || cEmail.split('@')[0];
+                    handleGoogleSelect({
+                      name: cName,
+                      email: cEmail,
+                      avatar: cName.charAt(0).toUpperCase()
+                    });
+                  }}
+                  style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '8px' }}
+                >
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Enter your name"
+                    value={customGoogleName}
+                    onChange={(e) => setCustomGoogleName(e.target.value)}
+                    style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+                  />
+                  <input
+                    type="email"
+                    className="form-input"
+                    placeholder="you@gmail.com"
+                    value={customGoogleEmail}
+                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
+                    required
+                    style={{ fontSize: '0.85rem', padding: '8px 12px' }}
+                  />
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomGoogleInput(false)}
+                      className="btn btn-secondary"
+                      style={{ padding: '4px 12px', fontSize: '0.8rem' }}
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      style={{ padding: '4px 14px', fontSize: '0.8rem' }}
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
             <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
