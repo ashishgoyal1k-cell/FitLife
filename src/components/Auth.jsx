@@ -10,7 +10,7 @@ export const Auth = ({ onAuthSuccess }) => {
   // Form Fields
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState(() => localStorage.getItem('fitlife_remember_email') || localStorage.getItem('healthify_remember_email') || '');
-  const [contactNumber, setContactNumber] = useState('+91 8529874646');
+  const [contactNumber, setContactNumber] = useState('');
   const [fitnessGoal, setFitnessGoal] = useState('maintain');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -128,7 +128,7 @@ export const Auth = ({ onAuthSuccess }) => {
       }
 
       // Create profile
-      const newProfile = createProfile(cleanName, fitnessGoal);
+      const newProfile = createProfile(cleanName, fitnessGoal, contactNumber.trim());
       users[cleanEmail] = newProfile;
       users[cleanName.toLowerCase()] = newProfile;
       localStorage.setItem('fitlife_users', JSON.stringify(users));
@@ -165,10 +165,11 @@ export const Auth = ({ onAuthSuccess }) => {
   };
 
   // Profile Factory (Pure JS)
-  const createProfile = (name, goal) => {
+  const createProfile = (name, goal, contact = '') => {
     const goalVal = goal || 'maintain';
     return {
       username: name || 'User',
+      contactNumber: contact || '',
       age: 25,
       weight: 70,
       height: 170,

@@ -8,6 +8,7 @@ export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snacks';
 
 export interface UserProfile {
   username: string;
+  contactNumber?: string;
   age: number;
   weight: number; // in kg
   height: number; // in cm

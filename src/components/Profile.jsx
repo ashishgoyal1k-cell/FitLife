@@ -35,6 +35,7 @@ export const Profile = ({ user, onUpdate, isInitialSetup = false }) => {
 
     const updatedProfile = {
       username: user.username,
+      contactNumber: user.contactNumber,
       age,
       weight,
       height,
