@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { LogOut, Sun, Moon, Flame, Apple, Activity, User } from 'lucide-react';
+import { LogOut, Sun, Moon, Flame, Apple, Activity, User, Dumbbell } from 'lucide-react';
 import './Header.css';
 
 export const Header = ({ user, activeTab, setActiveTab, onLogout }) => {
@@ -23,7 +23,7 @@ export const Header = ({ user, activeTab, setActiveTab, onLogout }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'food-logs', label: 'Food Log' },
-    { id: 'exercise', label: 'Exercise' },
+    { id: 'exercise', label: 'Exercises' },
     { id: 'weight-tracker', label: 'Weight Progress' },
     { id: 'profile', label: 'Profile' },
   ];
@@ -101,6 +101,7 @@ export const Header = ({ user, activeTab, setActiveTab, onLogout }) => {
             >
               {item.id === 'dashboard' && <Flame size={20} fill={isActive ? 'currentColor' : 'none'} />}
               {item.id === 'food-logs' && <Apple size={20} />}
+              {item.id === 'exercise' && <Dumbbell size={20} />}
               {item.id === 'weight-tracker' && <Activity size={20} />}
               {item.id === 'profile' && <User size={20} />}
               <span className="mobile-nav-label">{item.label}</span>
