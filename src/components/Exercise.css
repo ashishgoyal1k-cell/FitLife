@@ -928,7 +928,195 @@
   overflow: hidden;
 }
 
+/* =========================================
+   Exercise Search Portal Styles
+   ========================================= */
+
+.exercise-search-portal {
+  padding: 40px 32px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  text-align: center;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.05) 0%, rgba(0, 0, 0, 0.02) 100%), var(--bg-card);
+}
+
+.exercise-portal-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 560px;
+}
+
+.exercise-portal-icon-badge {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: var(--primary-glow);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
+}
+
+.exercise-portal-title {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.exercise-portal-desc {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.exercise-portal-section {
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.exercise-portal-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.exercise-portal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.exercise-portal-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.exercise-portal-tag-chip:hover {
+  background: var(--primary-glow);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.exercise-portal-muscle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.exercise-portal-muscle-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--transition-fast);
+}
+
+.exercise-portal-muscle-card:hover {
+  background: var(--primary-glow);
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.15);
+}
+
+.exercise-portal-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.exercise-portal-muscle-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.exercise-portal-muscle-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.exercise-portal-muscle-count {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.exercise-portal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.exercise-results-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.exercise-results-count {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.exercise-back-search-btn {
+  font-size: 0.8rem;
+  padding: 6px 12px;
+  gap: 6px;
+  display: inline-flex;
+  align-items: center;
+}
+
 @media (max-width: 768px) {
+  .exercise-portal-muscle-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .exercise-search-portal {
+    padding: 24px 16px;
+    gap: 24px;
+  }
+  .exercise-portal-title {
+    font-size: 1.35rem;
+  }
   .exercise-header-card {
     padding: 18px;
   }

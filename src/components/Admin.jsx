@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getAllUsers, getFoods, addFood, updateFood, deleteFood } from '../utils/db';
-import { Trash2, Edit, Plus, Search, Users, Flame, X, Database, Sparkles, TrendingUp, Lock, ShieldCheck, KeyRound, LogOut, Eye, EyeOff, ShieldAlert, CheckCircle2, Key, Cloud } from 'lucide-react';
+import { getAllUsers, getFoods, addFood, updateFood, deleteFood, getExercises, addExercise, updateExercise, deleteExercise } from '../utils/db';
+import { Trash2, Edit, Plus, Search, Users, Flame, X, Database, Sparkles, TrendingUp, Lock, ShieldCheck, KeyRound, LogOut, Eye, EyeOff, ShieldAlert, CheckCircle2, Key, Cloud, Dumbbell } from 'lucide-react';
 import { fetchUsersFromCloud, isFirebaseConfigured, getFirebaseConfig } from '../utils/firebase';
+import { EXERCISE_CATEGORIES } from '../data/exercisesData';
 import './Admin.css';
 
 const getFoodCategory = (food) => {
@@ -121,6 +122,32 @@ export const Admin = () => {
   const [formServingUnit, setFormServingUnit] = useState('piece');
   const [formQuantity, setFormQuantity] = useState('');
   const [formCategory, setFormCategory] = useState('indian food');
+
+  // Exercise Data & Filter States
+  const [exercises, setExercises] = useState([]);
+  const [exerciseSearch, setExerciseSearch] = useState('');
+  const [exerciseMuscleFilter, setExerciseMuscleFilter] = useState('All');
+  const [exerciseEquipmentFilter, setExerciseEquipmentFilter] = useState('All');
+  const [exerciseDifficultyFilter, setExerciseDifficultyFilter] = useState('All');
+  const [exerciseSortBy, setExerciseSortBy] = useState('name');
+
+  // Exercise Modal States
+  const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
+  const [showEditExerciseModal, setShowEditExerciseModal] = useState(false);
+  const [selectedExerciseToEdit, setSelectedExerciseToEdit] = useState(null);
+
+  // Exercise Form Field States
+  const [exFormName, setExFormName] = useState('');
+  const [exFormPrimaryMuscle, setExFormPrimaryMuscle] = useState('Chest');
+  const [exFormSecondaryMuscles, setExFormSecondaryMuscles] = useState('');
+  const [exFormEquipment, setExFormEquipment] = useState('Barbell');
+  const [exFormType, setExFormType] = useState('Strength');
+  const [exFormDifficulty, setExFormDifficulty] = useState('Intermediate');
+  const [exFormRecommendedReps, setExFormRecommendedReps] = useState('8 - 12 reps');
+  const [exFormMet, setExFormMet] = useState('5.0');
+  const [exFormDescription, setExFormDescription] = useState('');
+  const [exFormInstructions, setExFormInstructions] = useState('');
+  const [exFormTips, setExFormTips] = useState('');
 
   // Master PIN Authentication
   const handlePinLogin = (e) => {
@@ -260,6 +287,9 @@ export const Admin = () => {
 
     const allFoods = getFoods();
     setFoods(allFoods);
+
+    const allExercises = getExercises();
+    setExercises(allExercises);
 
     calculateAndSetStats(allUsers);
 
@@ -426,6 +456,98 @@ export const Admin = () => {
     }
   };
 
+  // Exercise Form Handlers
+  const resetExerciseForm = () => {
+    setExFormName('');
+    setExFormPrimaryMuscle('Chest');
+    setExFormSecondaryMuscles('');
+    setExFormEquipment('Barbell');
+    setExFormType('Strength');
+    setExFormDifficulty('Intermediate');
+    setExFormRecommendedReps('8 - 12 reps');
+    setExFormMet('5.0');
+    setExFormDescription('');
+    setExFormInstructions('');
+    setExFormTips('');
+    setSelectedExerciseToEdit(null);
+  };
+
+  const handleAddExerciseSubmit = (e) => {
+    e.preventDefault();
+    if (!exFormName.trim()) return;
+
+    const newEx = {
+      id: `ex_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`,
+      name: exFormName.trim(),
+      primaryMuscle: exFormPrimaryMuscle,
+      secondaryMuscles: exFormSecondaryMuscles ? exFormSecondaryMuscles.split(',').map(s => s.trim()).filter(Boolean) : [],
+      equipment: exFormEquipment,
+      exerciseType: exFormType,
+      difficulty: exFormDifficulty,
+      recommendedReps: exFormRecommendedReps.trim() || '8 - 12 reps',
+      met: parseFloat(exFormMet) || 5.0,
+      description: exFormDescription.trim(),
+      instructions: exFormInstructions.split('\n').map(s => s.trim()).filter(Boolean),
+      tips: exFormTips.split('\n').map(s => s.trim()).filter(Boolean),
+      createdAt: new Date().toISOString()
+    };
+
+    addExercise(newEx);
+    loadData();
+    setShowAddExerciseModal(false);
+    resetExerciseForm();
+  };
+
+  const handleEditExerciseClick = (ex) => {
+    setSelectedExerciseToEdit(ex);
+    setExFormName(ex.name || '');
+    setExFormPrimaryMuscle(ex.primaryMuscle || 'Chest');
+    setExFormSecondaryMuscles(Array.isArray(ex.secondaryMuscles) ? ex.secondaryMuscles.join(', ') : '');
+    setExFormEquipment(ex.equipment || 'Barbell');
+    setExFormType(ex.exerciseType || 'Strength');
+    setExFormDifficulty(ex.difficulty || 'Intermediate');
+    setExFormRecommendedReps(ex.recommendedReps || '8 - 12 reps');
+    setExFormMet((ex.met || 5.0).toString());
+    setExFormDescription(ex.description || '');
+    setExFormInstructions(Array.isArray(ex.instructions) ? ex.instructions.join('\n') : (ex.instructions || ''));
+    setExFormTips(Array.isArray(ex.tips) ? ex.tips.join('\n') : (ex.tips || ''));
+    setShowEditExerciseModal(true);
+  };
+
+  const handleEditExerciseSubmit = (e) => {
+    e.preventDefault();
+    if (!selectedExerciseToEdit || !exFormName.trim()) return;
+
+    const updated = {
+      ...selectedExerciseToEdit,
+      name: exFormName.trim(),
+      primaryMuscle: exFormPrimaryMuscle,
+      secondaryMuscles: exFormSecondaryMuscles ? exFormSecondaryMuscles.split(',').map(s => s.trim()).filter(Boolean) : [],
+      equipment: exFormEquipment,
+      exerciseType: exFormType,
+      difficulty: exFormDifficulty,
+      recommendedReps: exFormRecommendedReps.trim() || '8 - 12 reps',
+      met: parseFloat(exFormMet) || 5.0,
+      description: exFormDescription.trim(),
+      instructions: exFormInstructions.split('\n').map(s => s.trim()).filter(Boolean),
+      tips: exFormTips.split('\n').map(s => s.trim()).filter(Boolean),
+      updatedAt: new Date().toISOString()
+    };
+
+    updateExercise(updated);
+    loadData();
+    setShowEditExerciseModal(false);
+    setSelectedExerciseToEdit(null);
+    resetExerciseForm();
+  };
+
+  const handleDeleteExerciseClick = (id) => {
+    if (window.confirm('Are you sure you want to delete this exercise from the database?')) {
+      deleteExercise(id);
+      loadData();
+    }
+  };
+
   // Filter lists based on searches
   const filteredFoods = foods
     .filter(food => {
@@ -450,6 +572,28 @@ export const Admin = () => {
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : parseInt(b.id) || 0;
         return timeA - timeB;
       }
+      return 0;
+    });
+
+  const filteredExercises = exercises
+    .filter(ex => {
+      const q = exerciseSearch.toLowerCase().trim();
+      const matchesSearch = !q ||
+        ex.name.toLowerCase().includes(q) ||
+        ex.primaryMuscle.toLowerCase().includes(q) ||
+        ex.equipment.toLowerCase().includes(q) ||
+        (ex.secondaryMuscles && ex.secondaryMuscles.some(m => m.toLowerCase().includes(q)));
+      
+      const matchesMuscle = exerciseMuscleFilter === 'All' || ex.primaryMuscle.toLowerCase() === exerciseMuscleFilter.toLowerCase();
+      const matchesEquipment = exerciseEquipmentFilter === 'All' || ex.equipment.toLowerCase() === exerciseEquipmentFilter.toLowerCase();
+      const matchesDifficulty = exerciseDifficultyFilter === 'All' || ex.difficulty.toLowerCase() === exerciseDifficultyFilter.toLowerCase();
+
+      return matchesSearch && matchesMuscle && matchesEquipment && matchesDifficulty;
+    })
+    .sort((a, b) => {
+      if (exerciseSortBy === 'name') return a.name.localeCompare(b.name);
+      if (exerciseSortBy === 'muscle') return a.primaryMuscle.localeCompare(b.primaryMuscle);
+      if (exerciseSortBy === 'difficulty') return a.difficulty.localeCompare(b.difficulty);
       return 0;
     });
 
@@ -670,11 +814,30 @@ export const Admin = () => {
           >
             Food Database
           </button>
+          <button
+            onClick={() => setActiveTab('exercises')}
+            style={{
+              padding: '8px 16px',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 600,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              color: activeTab === 'exercises' ? 'var(--primary)' : 'var(--text-secondary)',
+              backgroundColor: activeTab === 'exercises' ? 'var(--primary-glow)' : 'transparent',
+              transition: 'all var(--transition-fast)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Dumbbell size={15} /> Exercise Database ({exercises.length})
+          </button>
         </div>
       </div>
 
       {/* TABS RENDER */}
-      {activeTab === 'stats' ? (
+      {activeTab === 'stats' && (
         /* STATISTICS DASHBOARD */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
@@ -790,8 +953,10 @@ export const Admin = () => {
           </div>
 
         </div>
-      ) : (
-        /* FOOD DATABASE MANAGER */
+      )}
+
+      {/* FOOD DATABASE MANAGER */}
+      {activeTab === 'foods' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           {/* Control Bar */}
@@ -907,6 +1072,181 @@ export const Admin = () => {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* EXERCISE DATABASE MANAGER */}
+      {activeTab === 'exercises' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Control Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ position: 'relative', width: '300px', flex: '1 1 240px' }}>
+              <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={16} />
+              <input
+                type="text"
+                placeholder="Search exercise, muscle, equipment..."
+                className="form-input"
+                value={exerciseSearch}
+                onChange={(e) => setExerciseSearch(e.target.value)}
+                style={{ padding: '10px 12px 10px 40px', borderRadius: '10px' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Muscle:</label>
+              <select
+                value={exerciseMuscleFilter}
+                onChange={(e) => setExerciseMuscleFilter(e.target.value)}
+                className="form-input"
+                style={{ padding: '6px 8px', borderRadius: '8px' }}
+              >
+                {EXERCISE_CATEGORIES.muscles.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Equipment:</label>
+              <select
+                value={exerciseEquipmentFilter}
+                onChange={(e) => setExerciseEquipmentFilter(e.target.value)}
+                className="form-input"
+                style={{ padding: '6px 8px', borderRadius: '8px' }}
+              >
+                {EXERCISE_CATEGORIES.equipment.map(eq => (
+                  <option key={eq} value={eq}>{eq}</option>
+                ))}
+              </select>
+
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Difficulty:</label>
+              <select
+                value={exerciseDifficultyFilter}
+                onChange={(e) => setExerciseDifficultyFilter(e.target.value)}
+                className="form-input"
+                style={{ padding: '6px 8px', borderRadius: '8px' }}
+              >
+                {EXERCISE_CATEGORIES.difficulties.map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Sort By:</label>
+              <select
+                value={exerciseSortBy}
+                onChange={(e) => setExerciseSortBy(e.target.value)}
+                className="form-input"
+                style={{ padding: '6px 8px', borderRadius: '8px' }}
+              >
+                <option value="name">Name (A-Z)</option>
+                <option value="muscle">Target Muscle</option>
+                <option value="difficulty">Difficulty</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => {
+                  resetExerciseForm();
+                  setShowAddExerciseModal(true);
+                }}
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '10px' }}
+              >
+                <Plus size={16} /> Add Exercise
+              </button>
+            </div>
+          </div>
+
+          {/* Database Exercise Grid/List */}
+          <div className="glass-card" style={{ padding: '20px' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-secondary)', fontWeight: 700 }}>
+                    <th style={{ padding: '12px 8px' }}>Exercise Name</th>
+                    <th style={{ padding: '12px 8px' }}>Target Muscle</th>
+                    <th style={{ padding: '12px 8px' }}>Equipment</th>
+                    <th style={{ padding: '12px 8px' }}>Type</th>
+                    <th style={{ padding: '12px 8px' }}>Difficulty</th>
+                    <th style={{ padding: '12px 8px' }}>Reps / Pace</th>
+                    <th style={{ padding: '12px 8px', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredExercises.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                        No exercises matching "{exerciseSearch}" found.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredExercises.map((ex) => (
+                      <tr key={ex.id} style={{ borderBottom: '1px solid var(--border)' }} className="table-row-hover">
+                        <td style={{ padding: '12px 8px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Dumbbell size={16} className="text-primary" />
+                            <span>{ex.name}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 8px' }}>
+                          <span style={{
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                            color: 'var(--primary)'
+                          }}>
+                            {ex.primaryMuscle}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>
+                          {ex.equipment}
+                        </td>
+                        <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>
+                          {ex.exerciseType}
+                        </td>
+                        <td style={{ padding: '12px 8px' }}>
+                          <span style={{
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            backgroundColor: ex.difficulty === 'Beginner' ? 'rgba(34, 197, 94, 0.12)' : ex.difficulty === 'Intermediate' ? 'rgba(234, 179, 8, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                            color: ex.difficulty === 'Beginner' ? '#22c55e' : ex.difficulty === 'Intermediate' ? '#eab308' : '#ef4444'
+                          }}>
+                            {ex.difficulty}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>
+                          {ex.recommendedReps || '8 - 12 reps'}
+                        </td>
+                        <td style={{ padding: '12px 8px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button
+                              onClick={() => handleEditExerciseClick(ex)}
+                              className="btn btn-secondary btn-icon-only"
+                              title="Edit exercise details"
+                              style={{ width: '28px', height: '28px', padding: 0 }}
+                            >
+                              <Edit size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteExerciseClick(ex.id)}
+                              className="btn btn-secondary btn-icon-only"
+                              title="Delete exercise"
+                              style={{ width: '28px', height: '28px', padding: 0, color: 'var(--danger)', borderColor: 'rgba(239,68,68,0.15)' }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1297,6 +1637,338 @@ export const Admin = () => {
                 </button>
                 <button type="submit" className="btn btn-primary">
                   Save & Connect Database
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD EXERCISE MODAL */}
+      {showAddExerciseModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '16px'
+        }}>
+          <div className="glass-card animate-fade" style={{ maxWidth: '560px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Dumbbell className="text-primary" size={20} /> Add New Exercise
+              </h3>
+              <button onClick={() => setShowAddExerciseModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddExerciseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Exercise Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Incline Dumbbell Curl"
+                  className="form-input"
+                  value={exFormName}
+                  onChange={(e) => setExFormName(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Primary Target Muscle</label>
+                  <select
+                    className="form-input"
+                    value={exFormPrimaryMuscle}
+                    onChange={(e) => setExFormPrimaryMuscle(e.target.value)}
+                  >
+                    {EXERCISE_CATEGORIES.muscles.filter(m => m !== 'All').map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Secondary Muscles</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Triceps, Delts"
+                    className="form-input"
+                    value={exFormSecondaryMuscles}
+                    onChange={(e) => setExFormSecondaryMuscles(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Equipment</label>
+                  <select
+                    className="form-input"
+                    value={exFormEquipment}
+                    onChange={(e) => setExFormEquipment(e.target.value)}
+                  >
+                    {EXERCISE_CATEGORIES.equipment.filter(eq => eq !== 'All').map(eq => (
+                      <option key={eq} value={eq}>{eq}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Difficulty</label>
+                  <select
+                    className="form-input"
+                    value={exFormDifficulty}
+                    onChange={(e) => setExFormDifficulty(e.target.value)}
+                  >
+                    {EXERCISE_CATEGORIES.difficulties.filter(d => d !== 'All').map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Exercise Type</label>
+                  <select
+                    className="form-input"
+                    value={exFormType}
+                    onChange={(e) => setExFormType(e.target.value)}
+                  >
+                    {EXERCISE_CATEGORIES.types.filter(t => t !== 'All').map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Recommended Reps / Pace</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 8 - 12 reps"
+                    className="form-input"
+                    value={exFormRecommendedReps}
+                    onChange={(e) => setExFormRecommendedReps(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Short summary of the exercise and benefits..."
+                  className="form-input"
+                  value={exFormDescription}
+                  onChange={(e) => setExFormDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Instructions (one step per line)</label>
+                <textarea
+                  rows={3}
+                  placeholder={"1. Set up bench to 45 degrees\n2. Grip dumbbells with neutral grip\n3. Curl weights upward"}
+                  className="form-input"
+                  value={exFormInstructions}
+                  onChange={(e) => setExFormInstructions(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Pro Form Tips (one tip per line)</label>
+                <textarea
+                  rows={2}
+                  placeholder={"Keep elbows pinned to your side\nDo not swing your torso"}
+                  className="form-input"
+                  value={exFormTips}
+                  onChange={(e) => setExFormTips(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowAddExerciseModal(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save Exercise
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT EXERCISE MODAL */}
+      {showEditExerciseModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '16px'
+        }}>
+          <div className="glass-card animate-fade" style={{ maxWidth: '560px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Edit className="text-primary" size={20} /> Edit Exercise
+              </h3>
+              <button onClick={() => setShowEditExerciseModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditExerciseSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Exercise Name *</label>
+                <input
+                  type="text"
+                  required
+                  className="form-input"
+                  value={exFormName}
+                  onChange={(e) => setExFormName(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Primary Target Muscle</label>
+                  <select
+                    className="form-input"
+                    value={exFormPrimaryMuscle}
+                    onChange={(e) => setExFormPrimaryMuscle(e.target.value)}
+                  >
+                    {EXERCISE_CATEGORIES.muscles.filter(m => m !== 'All').map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Secondary Muscles</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={exFormSecondaryMuscles}
+                    onChange={(e) => setExFormSecondaryMuscles(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Equipment</label>
+                  <select
+                    className="form-input"
+                    value={exFormEquipment}
+                    onChange={(e) => setExFormEquipment(e.target.value)}
+                  >
+                    {EXERCISE_CATEGORIES.equipment.filter(eq => eq !== 'All').map(eq => (
+                      <option key={eq} value={eq}>{eq}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Difficulty</label>
+                  <select
+                    className="form-input"
+                    value={exFormDifficulty}
+                    onChange={(e) => setExFormDifficulty(e.target.value)}
+                  >
+                    {EXERCISE_CATEGORIES.difficulties.filter(d => d !== 'All').map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Exercise Type</label>
+                  <select
+                    className="form-input"
+                    value={exFormType}
+                    onChange={(e) => setExFormType(e.target.value)}
+                  >
+                    {EXERCISE_CATEGORIES.types.filter(t => t !== 'All').map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Recommended Reps / Pace</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={exFormRecommendedReps}
+                    onChange={(e) => setExFormRecommendedReps(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Description</label>
+                <textarea
+                  rows={2}
+                  className="form-input"
+                  value={exFormDescription}
+                  onChange={(e) => setExFormDescription(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Instructions (one step per line)</label>
+                <textarea
+                  rows={3}
+                  className="form-input"
+                  value={exFormInstructions}
+                  onChange={(e) => setExFormInstructions(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Pro Form Tips (one tip per line)</label>
+                <textarea
+                  rows={2}
+                  className="form-input"
+                  value={exFormTips}
+                  onChange={(e) => setExFormTips(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowEditExerciseModal(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Update Exercise
                 </button>
               </div>
             </form>

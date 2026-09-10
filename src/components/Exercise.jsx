@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   getExerciseLogs,
   addExerciseLog,
-  deleteExerciseLog
+  deleteExerciseLog,
+  getExercises
 } from '../utils/db';
 import {
   INITIAL_EXERCISES,
@@ -37,16 +38,27 @@ export const Exercise = ({ user, selectedDate }) => {
   // Navigation tabs within Exercise section
   const [exerciseView, setExerciseView] = useState('library'); // 'library' | 'history'
 
-  // Exercises State (Predefined + Custom)
+  // Exercises State (Predefined + Admin Database + Custom)
   const [exercises, setExercises] = useState(() => {
     try {
+      const dbList = getExercises();
       const custom = localStorage.getItem(`fitlife_custom_exercises_${user.username}`);
       const parsedCustom = custom ? JSON.parse(custom) : [];
-      return [...INITIAL_EXERCISES, ...parsedCustom];
+      return [...dbList, ...parsedCustom];
     } catch {
       return INITIAL_EXERCISES;
     }
   });
+
+  // Re-fetch exercises on mount or view change
+  useEffect(() => {
+    try {
+      const dbList = getExercises();
+      const custom = localStorage.getItem(`fitlife_custom_exercises_${user.username}`);
+      const parsedCustom = custom ? JSON.parse(custom) : [];
+      setExercises([...dbList, ...parsedCustom]);
+    } catch {}
+  }, [user.username, exerciseView]);
 
   // User Favorites State
   const [favorites, setFavorites] = useState(() => {
@@ -65,7 +77,29 @@ export const Exercise = ({ user, selectedDate }) => {
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
   const [selectedType, setSelectedType] = useState('All');
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+  const [showAllExercises, setShowAllExercises] = useState(false);
   const [sortBy, setSortBy] = useState('popular'); // 'popular' | 'alpha' | 'most_logged'
+
+  // Determine if search or filter is active
+  const isSearchActive = Boolean(
+    searchQuery.trim() ||
+    selectedMuscle !== 'All' ||
+    selectedEquipment !== 'All' ||
+    selectedDifficulty !== 'All' ||
+    selectedType !== 'All' ||
+    showOnlyFavorites ||
+    showAllExercises
+  );
+
+  const handleResetSearch = () => {
+    setSearchQuery('');
+    setSelectedMuscle('All');
+    setSelectedEquipment('All');
+    setSelectedDifficulty('All');
+    setSelectedType('All');
+    setShowOnlyFavorites(false);
+    setShowAllExercises(false);
+  };
 
   // Detail Modal State
   const [selectedExercise, setSelectedExercise] = useState(null);
@@ -588,104 +622,207 @@ export const Exercise = ({ user, selectedDate }) => {
             </div>
           </div>
 
-          {/* Exercise Cards Grid */}
-          <div className="exercise-grid">
-            {filteredExercises.map((exercise) => {
-              const isFav = favorites.includes(exercise.id);
-              const matchingLogsCount = logs.filter((l) => l.name.toLowerCase() === exercise.name.toLowerCase()).length;
+          {/* Exercise Search Portal OR Filtered Exercise Grid */}
+          {!isSearchActive ? (
+            <div className="exercise-search-portal glass-card animate-fade">
+              <div className="exercise-portal-hero">
+                <div className="exercise-portal-icon-badge">
+                  <Search size={32} className="text-primary" />
+                </div>
+                <h2 className="exercise-portal-title">Search Exercise Library</h2>
+                <p className="exercise-portal-desc">
+                  Type an exercise, muscle, or equipment in the search box above to learn proper form, view coach tips, and track personal records.
+                </p>
+              </div>
 
-              return (
-                <div
-                  key={exercise.id}
-                  className="exercise-card glass-card animate-fade"
-                  onClick={() => handleOpenDetail(exercise)}
+              {/* Popular Quick Searches */}
+              <div className="exercise-portal-section">
+                <span className="exercise-portal-label">Popular Searches:</span>
+                <div className="exercise-portal-tags">
+                  {[
+                    'Bench Press',
+                    'Barbell Squat',
+                    'Pull-Up',
+                    'Bicep Curl',
+                    'Push-Up',
+                    'Overhead Press',
+                    'Romanian Deadlift',
+                    'Plank',
+                    'Lat Pulldown',
+                    'Leg Press'
+                  ].map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      className="exercise-portal-tag-chip"
+                      onClick={() => setSearchQuery(tag)}
+                    >
+                      <Search size={12} />
+                      <span>{tag}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Muscle Group Quick Select */}
+              <div className="exercise-portal-section">
+                <span className="exercise-portal-label">Or Select Target Muscle:</span>
+                <div className="exercise-portal-muscle-grid">
+                  {[
+                    { name: 'Chest', icon: '🛡️', count: exercises.filter(e => e.primaryMuscle === 'Chest').length },
+                    { name: 'Back', icon: '🦅', count: exercises.filter(e => e.primaryMuscle === 'Back').length },
+                    { name: 'Shoulders', icon: '⚡', count: exercises.filter(e => e.primaryMuscle === 'Shoulders').length },
+                    { name: 'Biceps', icon: '💪', count: exercises.filter(e => e.primaryMuscle === 'Biceps').length },
+                    { name: 'Triceps', icon: '🦾', count: exercises.filter(e => e.primaryMuscle === 'Triceps').length },
+                    { name: 'Legs', icon: '🦵', count: exercises.filter(e => e.primaryMuscle === 'Legs').length },
+                    { name: 'Core', icon: '🧘', count: exercises.filter(e => e.primaryMuscle === 'Core').length },
+                    { name: 'Cardio', icon: '🔥', count: exercises.filter(e => e.primaryMuscle === 'Cardio').length },
+                  ].map((m) => (
+                    <button
+                      key={m.name}
+                      type="button"
+                      className="exercise-portal-muscle-card"
+                      onClick={() => setSelectedMuscle(m.name)}
+                    >
+                      <span className="exercise-portal-emoji">{m.icon}</span>
+                      <div className="exercise-portal-muscle-text">
+                        <span className="exercise-portal-muscle-name">{m.name}</span>
+                        <span className="exercise-portal-muscle-count">{m.count} exercises</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bottom Quick Links */}
+              <div className="exercise-portal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowOnlyFavorites(true)}
                 >
-                  {/* Card Visual Header Badge */}
-                  <div className="exercise-card-badge-header">
-                    <div className="exercise-visual-icon-box">
-                      <Dumbbell size={22} className="exercise-card-icon" />
-                      <span className="exercise-muscle-tag">{exercise.primaryMuscle}</span>
-                    </div>
+                  <Heart size={16} fill="var(--danger)" color="var(--danger)" />
+                  <span>My Favorites ({favorites.length})</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setShowAllExercises(true)}
+                  style={{ textDecoration: 'underline', fontSize: '0.85rem' }}
+                >
+                  Or view all {exercises.length} exercises &rarr;
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Active Results Status Bar */}
+              <div className="exercise-results-bar">
+                <span className="exercise-results-count">
+                  Found <strong>{filteredExercises.length}</strong> {filteredExercises.length === 1 ? 'exercise' : 'exercises'}
+                  {searchQuery ? ` matching "${searchQuery}"` : selectedMuscle !== 'All' ? ` targeting ${selectedMuscle}` : ''}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-secondary exercise-back-search-btn"
+                  onClick={handleResetSearch}
+                >
+                  <RotateCcw size={14} /> Back to Search
+                </button>
+              </div>
 
-                    <div className="exercise-card-top-actions">
-                      <button
-                        type="button"
-                        className={`exercise-card-fav-btn ${isFav ? 'favorited' : ''}`}
-                        onClick={(e) => toggleFavorite(exercise.id, e)}
-                        title={isFav ? 'Remove from favorites' : 'Save to favorites'}
-                      >
-                        <Heart size={18} fill={isFav ? '#ef4444' : 'none'} color={isFav ? '#ef4444' : 'var(--text-secondary)'} />
-                      </button>
-                      {exercise.isCustom && (
+              {/* Exercise Cards Grid */}
+              <div className="exercise-grid">
+                {filteredExercises.map((exercise) => {
+                  const isFav = favorites.includes(exercise.id);
+
+                  return (
+                    <div
+                      key={exercise.id}
+                      className="exercise-card glass-card animate-fade"
+                      onClick={() => handleOpenDetail(exercise)}
+                    >
+                      {/* Card Visual Header Badge */}
+                      <div className="exercise-card-badge-header">
+                        <div className="exercise-visual-icon-box">
+                          <Dumbbell size={22} className="exercise-card-icon" />
+                          <span className="exercise-muscle-tag">{exercise.primaryMuscle}</span>
+                        </div>
+
+                        <div className="exercise-card-top-actions">
+                          <button
+                            type="button"
+                            className={`exercise-card-fav-btn ${isFav ? 'favorited' : ''}`}
+                            onClick={(e) => toggleFavorite(exercise.id, e)}
+                            title={isFav ? 'Remove from favorites' : 'Save to favorites'}
+                          >
+                            <Heart size={18} fill={isFav ? '#ef4444' : 'none'} color={isFav ? '#ef4444' : 'var(--text-secondary)'} />
+                          </button>
+                          {exercise.isCustom && (
+                            <button
+                              type="button"
+                              className="exercise-card-del-btn"
+                              onClick={(e) => handleDeleteCustomExercise(exercise.id, e)}
+                              title="Delete custom exercise"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Main Info */}
+                      <div className="exercise-card-body">
+                        <h3 className="exercise-card-name">{exercise.name}</h3>
+                        <p className="exercise-card-meta">
+                          <span>{exercise.equipment}</span>
+                          <span className="exercise-meta-dot">•</span>
+                          <span className={`exercise-difficulty-badge ${exercise.difficulty.toLowerCase()}`}>
+                            {exercise.difficulty}
+                          </span>
+                        </p>
+                        <p className="exercise-card-desc">
+                          {exercise.description}
+                        </p>
+                      </div>
+
+                      {/* Card Footer */}
+                      <div className="exercise-card-footer">
+                        <span className="exercise-reps-chip">
+                          <TrendingUp size={13} /> {exercise.recommendedReps}
+                        </span>
+
                         <button
                           type="button"
-                          className="exercise-card-del-btn"
-                          onClick={(e) => handleDeleteCustomExercise(exercise.id, e)}
-                          title="Delete custom exercise"
+                          className="btn btn-primary exercise-quick-add-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDetail(exercise);
+                          }}
                         >
-                          <Trash2 size={14} />
+                          <Plus size={15} /> Log Sets
                         </button>
-                      )}
+                      </div>
                     </div>
-                  </div>
+                  );
+                })}
+              </div>
 
-                  {/* Card Main Info */}
-                  <div className="exercise-card-body">
-                    <h3 className="exercise-card-name">{exercise.name}</h3>
-                    <p className="exercise-card-meta">
-                      <span>{exercise.equipment}</span>
-                      <span className="exercise-meta-dot">•</span>
-                      <span className={`exercise-difficulty-badge ${exercise.difficulty.toLowerCase()}`}>
-                        {exercise.difficulty}
-                      </span>
-                    </p>
-                    <p className="exercise-card-desc">
-                      {exercise.description}
-                    </p>
-                  </div>
-
-                  {/* Card Footer */}
-                  <div className="exercise-card-footer">
-                    <span className="exercise-reps-chip">
-                      <TrendingUp size={13} /> {exercise.recommendedReps}
-                    </span>
-
-                    <button
-                      type="button"
-                      className="btn btn-primary exercise-quick-add-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenDetail(exercise);
-                      }}
-                    >
-                      <Plus size={15} /> Log Sets
-                    </button>
-                  </div>
+              {filteredExercises.length === 0 && (
+                <div className="glass-card exercise-empty-state">
+                  <Dumbbell size={48} className="exercise-empty-icon" />
+                  <h3>No exercises found</h3>
+                  <p>Try adjusting your search terms or clearing active filters.</p>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleResetSearch}
+                  >
+                    Clear Search & Filters
+                  </button>
                 </div>
-              );
-            })}
-          </div>
-
-          {filteredExercises.length === 0 && (
-            <div className="glass-card exercise-empty-state">
-              <Dumbbell size={48} className="exercise-empty-icon" />
-              <h3>No exercises found</h3>
-              <p>Try adjusting your search terms or clearing active filters.</p>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setSelectedMuscle('All');
-                  setSelectedEquipment('All');
-                  setSelectedDifficulty('All');
-                  setSelectedType('All');
-                  setShowOnlyFavorites(false);
-                  setSearchQuery('');
-                }}
-              >
-                Clear All Filters
-              </button>
-            </div>
+              )}
+            </>
           )}
         </>
       )}

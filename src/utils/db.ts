@@ -1,5 +1,6 @@
 import type { UserProfile, MealLog, WaterLog, WeightLog, Gender, ActivityLevel, WeightGoal, FoodItem, SleepLog, ExerciseLog } from '../types';
 import { INDIAN_FOODS } from '../data/indianFoods';
+import { INITIAL_EXERCISES } from '../data/exercisesData';
 
 // BMR and TDEE Calculators
 export function calculateBMR(weight: number, height: number, age: number, gender: Gender): number {
@@ -58,7 +59,8 @@ const KEYS = {
   MEAL_LOGS: 'fitlife_meal_logs',
   WATER_LOGS: 'fitlife_water_logs',
   WEIGHT_LOGS: 'fitlife_weight_logs',
-  FOODS_LIST: 'fitlife_foods_list'
+  FOODS_LIST: 'fitlife_foods_list',
+  EXERCISES_LIST: 'fitlife_exercises_list'
 };
 
 // Auto-create admin user if not exists
@@ -274,6 +276,49 @@ export function deleteFood(foodId: string): void {
 
 export function resetFoodsToDefaults(): void {
   localStorage.setItem(KEYS.FOODS_LIST, JSON.stringify(INDIAN_FOODS));
+}
+
+// Exercise Database Helpers
+export function getExercises(): any[] {
+  const data = localStorage.getItem(KEYS.EXERCISES_LIST);
+  if (!data) {
+    localStorage.setItem(KEYS.EXERCISES_LIST, JSON.stringify(INITIAL_EXERCISES));
+    return INITIAL_EXERCISES;
+  }
+  try {
+    return JSON.parse(data);
+  } catch {
+    return INITIAL_EXERCISES;
+  }
+}
+
+export function saveExercises(exercises: any[]): void {
+  localStorage.setItem(KEYS.EXERCISES_LIST, JSON.stringify(exercises));
+}
+
+export function addExercise(exercise: any): void {
+  const exercises = getExercises();
+  exercises.unshift(exercise);
+  saveExercises(exercises);
+}
+
+export function updateExercise(updated: any): void {
+  const exercises = getExercises();
+  const index = exercises.findIndex(e => e.id === updated.id);
+  if (index >= 0) {
+    exercises[index] = updated;
+    saveExercises(exercises);
+  }
+}
+
+export function deleteExercise(exerciseId: string): void {
+  const exercises = getExercises();
+  const filtered = exercises.filter(e => e.id !== exerciseId);
+  saveExercises(filtered);
+}
+
+export function resetExercisesToDefaults(): void {
+  localStorage.setItem(KEYS.EXERCISES_LIST, JSON.stringify(INITIAL_EXERCISES));
 }
 
 // Sleep Log Helpers
