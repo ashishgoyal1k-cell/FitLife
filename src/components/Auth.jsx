@@ -321,7 +321,12 @@ export const Auth = ({ onAuthSuccess }) => {
           callback: async (resp) => {
             if (resp.error) {
               if (resp.error !== 'popup_closed_by_user') {
-                setError(`Google Sign-In: ${resp.error_description || resp.error}`);
+                const errStr = String(resp.error_description || resp.error || '');
+                if (errStr.includes('origin_mismatch') || resp.error === 'idpiframe_initialization_failed') {
+                  setError(`Google Error (origin_mismatch): Please add "${window.location.origin}" under Authorized JavaScript origins in Google Cloud Console.`);
+                } else {
+                  setError(`Google Sign-In: ${errStr}`);
+                }
               }
               return;
             }
