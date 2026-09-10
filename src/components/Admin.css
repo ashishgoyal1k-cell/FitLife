@@ -12,3 +12,73 @@
 .table-row-hover:hover {
   background-color: var(--primary-glow) !important;
 }
+
+/* Admin Lock Screen */
+.admin-lock-wrapper {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.admin-lock-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 32px 28px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.admin-lock-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.admin-lock-badge {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 16px auto;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.admin-lock-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.admin-lock-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Admin Security Bar */
+.admin-security-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-security-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+

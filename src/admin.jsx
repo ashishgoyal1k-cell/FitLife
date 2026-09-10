@@ -7,7 +7,7 @@ import { Flame } from 'lucide-react'
 createRoot(document.getElementById('admin-root')).render(
   <StrictMode>
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-app)' }}>
-      
+
       {/* Standalone Admin Header */}
       <header style={{
         borderBottom: '1px solid var(--border)',
@@ -43,7 +43,7 @@ createRoot(document.getElementById('admin-root')).render(
             </div>
             <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-secondary)', marginLeft: '8px', borderLeft: '1px solid var(--border)', paddingLeft: '8px' }}>Admin Console</span>
           </div>
-          
+
           <a href="/" style={{
             textDecoration: 'none',
             color: 'var(--primary)',
