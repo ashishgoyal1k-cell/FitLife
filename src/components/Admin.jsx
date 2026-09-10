@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getAllUsers, getFoods, addFood, updateFood, deleteFood } from '../utils/db';
-import { Trash2, Edit, Plus, Search, Users, Flame, X, Database, Sparkles, TrendingUp, Lock, ShieldCheck, KeyRound, LogOut, Eye, EyeOff, ShieldAlert, CheckCircle2, Key } from 'lucide-react';
+import { Trash2, Edit, Plus, Search, Users, Flame, X, Database, Sparkles, TrendingUp, Lock, ShieldCheck, KeyRound, LogOut, Eye, EyeOff, ShieldAlert, CheckCircle2, Key, Cloud } from 'lucide-react';
+import { fetchUsersFromCloud, isFirebaseConfigured, getFirebaseConfig } from '../utils/firebase';
 import './Admin.css';
 
 const getFoodCategory = (food) => {
@@ -77,6 +78,13 @@ export const Admin = () => {
   const [showChangePinModal, setShowChangePinModal] = useState(false);
   const [newPinInput, setNewPinInput] = useState('');
   const [pinChangeSuccess, setPinChangeSuccess] = useState('');
+
+  // Cloud Database (Firebase) Sync States
+  const [isCloudActive, setIsCloudActive] = useState(() => isFirebaseConfigured());
+  const [showFirebaseModal, setShowFirebaseModal] = useState(false);
+  const [firebaseConfigInput, setFirebaseConfigInput] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
 
   const [activeTab, setActiveTab] = useState('stats');
   
@@ -211,21 +219,14 @@ export const Admin = () => {
     }
   }, [isAdminAuthenticated]);
 
-  const loadData = () => {
-    const allUsers = getAllUsers();
-    setUsers(allUsers);
-
-    const allFoods = getFoods();
-    setFoods(allFoods);
-
-    // Calculate overall statistics
-    const userList = Object.values(allUsers);
+  const calculateAndSetStats = (userMap) => {
+    const userList = Object.values(userMap);
     const totalUsers = userList.length;
 
     let totalWeight = 0;
     const goalsCount = { lose: 0, maintain: 0, gain: 0 };
     userList.forEach(u => {
-      totalWeight += u.weight;
+      totalWeight += (u.weight || 0);
       if (u.goal === 'lose' || u.goal === 'maintain' || u.goal === 'gain') {
         goalsCount[u.goal]++;
       }
@@ -251,6 +252,80 @@ export const Admin = () => {
       avgWeight,
       goals: goalsCount
     });
+  };
+
+  const loadData = () => {
+    const allUsers = getAllUsers();
+    setUsers(allUsers);
+
+    const allFoods = getFoods();
+    setFoods(allFoods);
+
+    calculateAndSetStats(allUsers);
+
+    // Auto-sync from Cloud Firestore if configured
+    if (isFirebaseConfigured()) {
+      setIsSyncing(true);
+      fetchUsersFromCloud()
+        .then((cloudUsers) => {
+          if (cloudUsers && Object.keys(cloudUsers).length > 0) {
+            const merged = { ...allUsers, ...cloudUsers };
+            setUsers(merged);
+            localStorage.setItem('fitlife_users', JSON.stringify(merged));
+            calculateAndSetStats(merged);
+            setSyncMessage('Cloud sync complete: all users up to date.');
+            setTimeout(() => setSyncMessage(''), 3000);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setIsSyncing(false));
+    }
+  };
+
+  // Parse & Save Firebase Configuration
+  const handleSaveFirebaseConfig = (e) => {
+    e.preventDefault();
+    setAuthError('');
+    try {
+      let configObj = null;
+      const raw = firebaseConfigInput.trim();
+      if (raw.startsWith('{') && raw.endsWith('}')) {
+        configObj = JSON.parse(raw);
+      } else {
+        const apiKeyMatch = raw.match(/apiKey:\s*["']([^"']+)["']/);
+        const projectIdMatch = raw.match(/projectId:\s*["']([^"']+)["']/);
+        const authDomainMatch = raw.match(/authDomain:\s*["']([^"']+)["']/);
+        const storageBucketMatch = raw.match(/storageBucket:\s*["']([^"']+)["']/);
+        const messagingSenderIdMatch = raw.match(/messagingSenderId:\s*["']([^"']+)["']/);
+        const appIdMatch = raw.match(/appId:\s*["']([^"']+)["']/);
+
+        if (apiKeyMatch && projectIdMatch) {
+          configObj = {
+            apiKey: apiKeyMatch[1],
+            projectId: projectIdMatch[1],
+            authDomain: authDomainMatch ? authDomainMatch[1] : `${projectIdMatch[1]}.firebaseapp.com`,
+            storageBucket: storageBucketMatch ? storageBucketMatch[1] : `${projectIdMatch[1]}.appspot.com`,
+            messagingSenderId: messagingSenderIdMatch ? messagingSenderIdMatch[1] : '',
+            appId: appIdMatch ? appIdMatch[1] : '',
+          };
+        }
+      }
+
+      if (!configObj || !configObj.apiKey || !configObj.projectId) {
+        setAuthError('Could not find apiKey or projectId in the configuration snippet.');
+        return;
+      }
+
+      localStorage.setItem('fitlife_firebase_config', JSON.stringify(configObj));
+      setIsCloudActive(true);
+      setShowFirebaseModal(false);
+      setFirebaseConfigInput('');
+      setSyncMessage('Firebase Cloud Database connected successfully!');
+      setTimeout(() => setSyncMessage(''), 4000);
+      loadData();
+    } catch (err) {
+      setAuthError(`Error parsing Firebase config: ${err.message}`);
+    }
   };
 
   const getUserLogCount = (username) => {
@@ -500,6 +575,29 @@ export const Admin = () => {
           </span>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Cloud Database (Firebase) Sync Button */}
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{
+              fontSize: '0.82rem',
+              padding: '6px 12px',
+              gap: '6px',
+              borderColor: isCloudActive ? 'rgba(16, 185, 129, 0.4)' : 'rgba(59, 130, 246, 0.4)',
+              color: isCloudActive ? '#6ee7b7' : '#93c5fd'
+            }}
+            onClick={() => {
+              if (isCloudActive) {
+                loadData();
+              } else {
+                setShowFirebaseModal(true);
+              }
+            }}
+          >
+            <Cloud size={14} />
+            {isSyncing ? 'Syncing...' : isCloudActive ? 'Cloud Synced (Refresh)' : 'Connect Firebase Cloud'}
+          </button>
+
           <button
             type="button"
             className="btn btn-secondary"
@@ -518,6 +616,14 @@ export const Admin = () => {
           </button>
         </div>
       </div>
+
+      {/* Sync Status Banner */}
+      {syncMessage && (
+        <div className="animate-fade auth-alert-success" style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircle2 size={16} />
+          <span>{syncMessage}</span>
+        </div>
+      )}
 
       {/* Title Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
@@ -1116,6 +1222,81 @@ export const Admin = () => {
                 </button>
                 <button type="submit" className="btn btn-primary">
                   Update PIN
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Firebase Cloud Database Setup Modal */}
+      {showFirebaseModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '16px'
+        }}>
+          <div className="glass-card animate-fade" style={{ maxWidth: '520px', width: '100%', padding: '28px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+              <Cloud size={36} style={{ color: 'var(--primary)', margin: '0 auto 10px auto', display: 'block' }} />
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '4px' }}>Connect Firebase Cloud Database</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                Enable real-time synchronization between Mobile, Laptop, and all devices.
+              </p>
+            </div>
+
+            {authError && (
+              <div className="animate-fade auth-alert-error" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldAlert size={16} />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveFirebaseConfig}>
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label className="form-label">Firebase Config Snippet</label>
+                <textarea
+                  className="form-input"
+                  rows={7}
+                  placeholder={`Paste your Firebase configuration snippet here:\n\nconst firebaseConfig = {\n  apiKey: "AIzaSy...",\n  projectId: "fitlife-...",\n  ...\n};`}
+                  value={firebaseConfigInput}
+                  onChange={(e) => setFirebaseConfigInput(e.target.value)}
+                  style={{ fontFamily: 'monospace', fontSize: '0.8rem', resize: 'vertical' }}
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', background: 'var(--surface-light)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', marginBottom: '16px', lineHeight: '1.45' }}>
+                <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Where to find this:</div>
+                <ol style={{ margin: 0, paddingLeft: '18px' }}>
+                  <li>Open <a href="https://console.firebase.google.com/" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>Firebase Console</a> &rarr; select <strong>FitLife</strong></li>
+                  <li>Click Project Settings (⚙️) &rarr; Web Apps &rarr; copy <code>firebaseConfig</code></li>
+                </ol>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowFirebaseModal(false);
+                    setFirebaseConfigInput('');
+                  }}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save & Connect Database
                 </button>
               </div>
             </form>

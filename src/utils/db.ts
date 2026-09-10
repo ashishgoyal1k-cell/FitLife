@@ -92,6 +92,8 @@ if (typeof window !== 'undefined') {
   }
 }
 
+import { syncUserToCloud, syncFoodToCloud } from './firebase';
+
 // Current Session Helpers
 export function getCurrentUser(): UserProfile | null {
   const data = localStorage.getItem(KEYS.CURRENT_USER);
@@ -105,6 +107,10 @@ export function setCurrentUser(profile: UserProfile | null): void {
     const users = getAllUsers();
     users[profile.username] = profile;
     localStorage.setItem(KEYS.USERS_LIST, JSON.stringify(users));
+    // Asynchronously sync to Cloud Firestore
+    try {
+      syncUserToCloud(profile);
+    } catch {}
   } else {
     localStorage.removeItem(KEYS.CURRENT_USER);
   }
@@ -243,6 +249,9 @@ export function addFood(food: FoodItem): void {
   const foods = getFoods();
   foods.push(food);
   saveFoods(foods);
+  try {
+    syncFoodToCloud(food);
+  } catch {}
 }
 
 export function updateFood(updatedFood: FoodItem): void {
@@ -251,6 +260,9 @@ export function updateFood(updatedFood: FoodItem): void {
   if (index >= 0) {
     foods[index] = updatedFood;
     saveFoods(foods);
+    try {
+      syncFoodToCloud(updatedFood);
+    } catch {}
   }
 }
 
