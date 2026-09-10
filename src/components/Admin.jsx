@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getAllUsers, getFoods, addFood, updateFood, deleteFood, resetFoodsToDefaults } from '../utils/db';
-import { Trash2, Edit, Plus, Search, Users, Flame, RefreshCw, X, Database, Sparkles, TrendingUp, Lock, ShieldCheck, KeyRound, LogOut, Eye, EyeOff, ShieldAlert, CheckCircle2, Key } from 'lucide-react';
+import { getAllUsers, getFoods, addFood, updateFood, deleteFood } from '../utils/db';
+import { Trash2, Edit, Plus, Search, Users, Flame, X, Database, Sparkles, TrendingUp, Lock, ShieldCheck, KeyRound, LogOut, Eye, EyeOff, ShieldAlert, CheckCircle2, Key } from 'lucide-react';
 import './Admin.css';
 
 const getFoodCategory = (food) => {
@@ -347,13 +347,6 @@ export const Admin = () => {
   const handleDeleteClick = (foodId) => {
     if (window.confirm('Are you sure you want to delete this food item from the database?')) {
       deleteFood(foodId);
-      loadData();
-    }
-  };
-
-  const handleResetDb = () => {
-    if (window.confirm('This will restore the default food database and delete any custom additions or edits. Continue?')) {
-      resetFoodsToDefaults();
       loadData();
     }
   };
@@ -736,15 +729,6 @@ export const Admin = () => {
               </select>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={handleResetDb}
-                className="btn btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '10px' }}
-                title="Restore default Indian food items"
-              >
-                <RefreshCw size={16} /> Reset defaults
-              </button>
-
               <button
                 onClick={() => {
                   resetForm();
