@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAllUsers, setCurrentUser } from '../utils/db';
-import { Flame, Eye, EyeOff, ShieldAlert, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Flame, Eye, EyeOff, ShieldAlert, CheckCircle2, ChevronRight, Settings, ExternalLink, Copy, Check } from 'lucide-react';
 import './Auth.css';
 
 export const Auth = ({ onAuthSuccess }) => {
@@ -37,8 +37,10 @@ export const Auth = ({ onAuthSuccess }) => {
   const [googleClientId, setGoogleClientId] = useState(() => {
     return import.meta.env.VITE_GOOGLE_CLIENT_ID || localStorage.getItem('fitlife_google_client_id') || '';
   });
+  const activeClientId = (googleClientId || import.meta.env.VITE_GOOGLE_CLIENT_ID || localStorage.getItem('fitlife_google_client_id') || '').trim();
   const [showGoogleSetupModal, setShowGoogleSetupModal] = useState(false);
   const [googleClientIdInput, setGoogleClientIdInput] = useState('');
+  const [copiedOrigin, setCopiedOrigin] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetDone, setResetDone] = useState(false);
@@ -446,9 +448,45 @@ export const Auth = ({ onAuthSuccess }) => {
 
         {/* Error Alert */}
         {error && (
-          <div className="animate-fade auth-alert-error">
-            <ShieldAlert size={18} style={{ flexShrink: 0 }} />
-            <span>{error}</span>
+          <div className="animate-fade auth-alert-error" style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+              <ShieldAlert size={18} style={{ flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>{error}</span>
+            </div>
+            {error.includes('origin_mismatch') && (
+              <div style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(239, 68, 68, 0.4)', padding: '10px 12px', borderRadius: 'var(--radius-sm)', width: '100%', fontSize: '0.82rem', marginTop: '4px' }}>
+                <div style={{ fontWeight: 600, color: '#fca5a5', marginBottom: '4px' }}>Fix Error 400: origin_mismatch in Google Cloud:</div>
+                <div style={{ marginBottom: '6px', color: 'rgba(255,255,255,0.85)' }}>
+                  Add this exact URL under <strong>Authorized JavaScript origins</strong>:
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                  <code style={{ background: 'rgba(0,0,0,0.4)', padding: '4px 8px', borderRadius: '4px', flex: 1, color: '#6ee7b7', fontFamily: 'monospace', fontSize: '0.85rem', userSelect: 'all' }}>
+                    {typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5174'}
+                  </code>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    style={{ fontSize: '0.75rem', padding: '4px 8px', border: '1px solid rgba(255,255,255,0.2)' }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.origin);
+                      setCopiedOrigin(true);
+                      setTimeout(() => setCopiedOrigin(false), 2000);
+                    }}
+                  >
+                    {copiedOrigin ? <Check size={14} color="#6ee7b7" /> : <Copy size={14} />}
+                    <span style={{ marginLeft: '4px' }}>{copiedOrigin ? 'Copied' : 'Copy'}</span>
+                  </button>
+                </div>
+                <a
+                  href="https://console.cloud.google.com/apis/credentials"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: '#93c5fd', textDecoration: 'underline', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                >
+                  Open Google Cloud Console Credentials <ExternalLink size={12} />
+                </a>
+              </div>
+            )}
           </div>
         )}
 
@@ -539,20 +577,35 @@ export const Auth = ({ onAuthSuccess }) => {
               <div className="auth-divider-line" />
             </div>
 
-            {/* Google Sign In Button */}
-            <button
-              type="button"
-              className="btn btn-secondary auth-google-btn"
-              onClick={handleGoogleAuth}
-            >
-              <svg viewBox="0 0 24 24" width="18" height="18" style={{ display: 'block' }}>
-                <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.65l3.15-3.15C17.45 1.77 14.93 1 12 1 7.37 1 3.4 3.66 1.48 7.55l3.77 2.92C6.15 7.57 8.85 5.04 12 5.04z" />
-                <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.28 1.48-1.11 2.73-2.36 3.57l3.7 2.87c2.16-1.99 3.41-4.92 3.41-8.59z" />
-                <path fill="#FBBC05" d="M5.25 14.77c-.25-.75-.39-1.55-.39-2.37s.14-1.62.39-2.37L1.48 7.11C.53 9.02 0 11.16 0 13.4s.53 4.38 1.48 6.29l3.77-2.92z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.7-2.87c-1.02.68-2.33 1.09-3.58 1.09-3.15 0-5.85-2.53-6.75-5.43L1.48 16.03C3.4 19.92 7.37 23 12 23z" />
-              </svg>
-              <span>Log in with Google</span>
-            </button>
+            {/* Google Sign In Button & OAuth Settings */}
+            <div className="auth-google-row" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-secondary auth-google-btn"
+                style={{ flex: 1 }}
+                onClick={handleGoogleAuth}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" style={{ display: 'block' }}>
+                  <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.65l3.15-3.15C17.45 1.77 14.93 1 12 1 7.37 1 3.4 3.66 1.48 7.55l3.77 2.92C6.15 7.57 8.85 5.04 12 5.04z" />
+                  <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.28 1.48-1.11 2.73-2.36 3.57l3.7 2.87c2.16-1.99 3.41-4.92 3.41-8.59z" />
+                  <path fill="#FBBC05" d="M5.25 14.77c-.25-.75-.39-1.55-.39-2.37s.14-1.62.39-2.37L1.48 7.11C.53 9.02 0 11.16 0 13.4s.53 4.38 1.48 6.29l3.77-2.92z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.7-2.87c-1.02.68-2.33 1.09-3.58 1.09-3.15 0-5.85-2.53-6.75-5.43L1.48 16.03C3.4 19.92 7.37 23 12 23z" />
+                </svg>
+                <span>Log in with Google</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                title="Google OAuth Settings & Allowed Origins"
+                onClick={() => {
+                  setGoogleClientIdInput(activeClientId);
+                  setShowGoogleSetupModal(true);
+                }}
+                style={{ padding: '10px 12px', minWidth: '42px', justifyContent: 'center' }}
+              >
+                <Settings size={18} />
+              </button>
+            </div>
 
             {/* Switch to Sign Up */}
             <div className="auth-footer-text">
@@ -660,20 +713,35 @@ export const Auth = ({ onAuthSuccess }) => {
               <div className="auth-divider-line" />
             </div>
 
-            {/* Google Sign Up Button */}
-            <button
-              type="button"
-              className="btn btn-secondary auth-google-btn"
-              onClick={handleGoogleAuth}
-            >
-              <svg viewBox="0 0 24 24" width="18" height="18" style={{ display: 'block' }}>
-                <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.65l3.15-3.15C17.45 1.77 14.93 1 12 1 7.37 1 3.4 3.66 1.48 7.55l3.77 2.92C6.15 7.57 8.85 5.04 12 5.04z" />
-                <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.28 1.48-1.11 2.73-2.36 3.57l3.7 2.87c2.16-1.99 3.41-4.92 3.41-8.59z" />
-                <path fill="#FBBC05" d="M5.25 14.77c-.25-.75-.39-1.55-.39-2.37s.14-1.62.39-2.37L1.48 7.11C.53 9.02 0 11.16 0 13.4s.53 4.38 1.48 6.29l3.77-2.92z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.7-2.87c-1.02.68-2.33 1.09-3.58 1.09-3.15 0-5.85-2.53-6.75-5.43L1.48 16.03C3.4 19.92 7.37 23 12 23z" />
-              </svg>
-              <span>Sign up with Google</span>
-            </button>
+            {/* Google Sign Up Button & OAuth Settings */}
+            <div className="auth-google-row" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-secondary auth-google-btn"
+                style={{ flex: 1 }}
+                onClick={handleGoogleAuth}
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" style={{ display: 'block' }}>
+                  <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.65l3.15-3.15C17.45 1.77 14.93 1 12 1 7.37 1 3.4 3.66 1.48 7.55l3.77 2.92C6.15 7.57 8.85 5.04 12 5.04z" />
+                  <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.28 1.48-1.11 2.73-2.36 3.57l3.7 2.87c2.16-1.99 3.41-4.92 3.41-8.59z" />
+                  <path fill="#FBBC05" d="M5.25 14.77c-.25-.75-.39-1.55-.39-2.37s.14-1.62.39-2.37L1.48 7.11C.53 9.02 0 11.16 0 13.4s.53 4.38 1.48 6.29l3.77-2.92z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.7-2.87c-1.02.68-2.33 1.09-3.58 1.09-3.15 0-5.85-2.53-6.75-5.43L1.48 16.03C3.4 19.92 7.37 23 12 23z" />
+                </svg>
+                <span>Sign up with Google</span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                title="Google OAuth Settings & Allowed Origins"
+                onClick={() => {
+                  setGoogleClientIdInput(activeClientId);
+                  setShowGoogleSetupModal(true);
+                }}
+                style={{ padding: '10px 12px', minWidth: '42px', justifyContent: 'center' }}
+              >
+                <Settings size={18} />
+              </button>
+            </div>
 
             {/* Switch to Log In */}
             <div className="auth-footer-text">
@@ -690,44 +758,87 @@ export const Auth = ({ onAuthSuccess }) => {
         )}
       </div>
 
-      {/* Google OAuth Setup Modal (Shown only if Client ID is missing on localhost) */}
+      {/* Google OAuth Setup & Origin Modal */}
       {showGoogleSetupModal && (
         <div className="auth-modal-overlay">
-          <div className="glass-card animate-fade auth-modal-card" style={{ maxWidth: '480px' }}>
+          <div className="glass-card animate-fade auth-modal-card" style={{ maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="auth-modal-header">
-              <svg viewBox="0 0 24 24" width="32" height="32" style={{ display: 'block', margin: '0 auto 12px auto' }}>
+              <svg viewBox="0 0 24 24" width="32" height="32" style={{ display: 'block', margin: '0 auto 10px auto' }}>
                 <path fill="#EA4335" d="M12 5.04c1.62 0 3.08.56 4.22 1.65l3.15-3.15C17.45 1.77 14.93 1 12 1 7.37 1 3.4 3.66 1.48 7.55l3.77 2.92C6.15 7.57 8.85 5.04 12 5.04z" />
                 <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.28 1.48-1.11 2.73-2.36 3.57l3.7 2.87c2.16-1.99 3.41-4.92 3.41-8.59z" />
                 <path fill="#FBBC05" d="M5.25 14.77c-.25-.75-.39-1.55-.39-2.37s.14-1.62.39-2.37L1.48 7.11C.53 9.02 0 11.16 0 13.4s.53 4.38 1.48 6.29l3.77-2.92z" />
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.7-2.87c-1.02.68-2.33 1.09-3.58 1.09-3.15 0-5.85-2.53-6.75-5.43L1.48 16.03C3.4 19.92 7.37 23 12 23z" />
               </svg>
-              <h3 className="auth-modal-title">Official Google Sign-In</h3>
+              <h3 className="auth-modal-title">Google OAuth & Origin Configuration</h3>
               <p className="auth-modal-subtitle">
-                To redirect directly to Google's official sign-in page, provide your Google OAuth Client ID:
+                Configure your Google OAuth 2.0 Client ID and whitelist your current origin.
               </p>
             </div>
 
-            <form onSubmit={handleSaveGoogleClientId} style={{ padding: '16px 24px' }}>
+            <form onSubmit={handleSaveGoogleClientId} style={{ padding: '14px 22px' }}>
               <div className="form-group" style={{ marginBottom: '14px' }}>
                 <label className="form-label">Google OAuth Client ID</label>
                 <input
                   type="text"
                   className="form-input"
                   placeholder="e.g. 123456789-xxxx.apps.googleusercontent.com"
-                  value={googleClientIdInput}
+                  value={googleClientIdInput || activeClientId}
                   onChange={(e) => setGoogleClientIdInput(e.target.value)}
                   required
-                  autoFocus
                 />
               </div>
 
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'var(--surface-light)', padding: '12px 14px', borderRadius: 'var(--radius-sm)', marginBottom: '16px', lineHeight: '1.45' }}>
-                <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>3-Step Setup for Localhost:</div>
-                <ol style={{ margin: 0, paddingLeft: '18px' }}>
-                  <li>Open <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>Google Cloud Console &rarr; Credentials</a></li>
-                  <li>Click <strong>Create Credentials &rarr; OAuth client ID</strong> (Web application)</li>
-                  <li>Add Authorized JavaScript origin: <code>http://localhost:5174</code></li>
-                </ol>
+              {/* Origin Whitelist Guide Box */}
+              <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', background: 'var(--surface-light)', border: '1px solid var(--border-color)', padding: '14px', borderRadius: 'var(--radius-md)', marginBottom: '16px', lineHeight: '1.5' }}>
+                <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
+                  🔑 Whitelist in Google Cloud Console:
+                </div>
+                <div style={{ marginBottom: '8px' }}>
+                  To avoid <code>Error 400: origin_mismatch</code>, add these to <strong>Authorized JavaScript origins</strong>:
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)', padding: '6px 10px', borderRadius: '4px' }}>
+                    <code style={{ color: '#6ee7b7', fontFamily: 'monospace' }}>
+                      {typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5174'}
+                    </code>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(window.location.origin);
+                        setCopiedOrigin(true);
+                        setTimeout(() => setCopiedOrigin(false), 2000);
+                      }}
+                    >
+                      {copiedOrigin ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)', padding: '6px 10px', borderRadius: '4px' }}>
+                    <code style={{ color: '#93c5fd', fontFamily: 'monospace' }}>https://ashishgoyal1k-cell.github.io</code>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ fontSize: '0.75rem', padding: '2px 8px' }}
+                      onClick={() => {
+                        navigator.clipboard.writeText('https://ashishgoyal1k-cell.github.io');
+                      }}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                <a
+                  href="https://console.cloud.google.com/apis/credentials"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: 'var(--primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'underline' }}
+                >
+                  Open Google Cloud Console Credentials <ExternalLink size={12} />
+                </a>
               </div>
 
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -737,14 +848,14 @@ export const Auth = ({ onAuthSuccess }) => {
                   className="btn btn-secondary"
                   style={{ padding: '8px 14px', fontSize: '0.85rem' }}
                 >
-                  Cancel
+                  Close
                 </button>
                 <button
                   type="submit"
                   className="btn btn-primary"
                   style={{ padding: '8px 16px', fontSize: '0.85rem' }}
                 >
-                  Save & Open Google Sign-In
+                  Save Client ID
                 </button>
               </div>
             </form>
